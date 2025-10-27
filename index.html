@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<title>Mini YouTube plejlista</title>
+<style>
+  body { font-family:sans-serif; background:#111; color:#fff; text-align:center; margin:20px; }
+  #player { width:80vw; height:45vw; max-width:960px; max-height:540px; border:none; border-radius:12px; margin-bottom:20px; }
+  ul { list-style:none; padding:0; margin:0 auto; max-width:600px; text-align:left; }
+  li { margin:6px 0; }
+  a { color:#0ff; text-decoration:none; cursor:pointer; }
+  a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<h2>🎬 Mini YouTube plejlista</h2>
+
+<iframe id="player" src="" allowfullscreen></iframe>
+
+<ul id="lista"></ul>
+
+<script>
+const videoIds = [
+  "xoOG41_CmfY","xwWJ0l0ItA0","7OsK2bB7cos","z6ivrP4hyX0","LPgvNlrBfb0",
+  "yzJFgk2H6fg","M7KWEXdUG80","xq0HdQpem1E","N0U0RFhuUTA","yDF0Mawspg8",
+  "P1K0FxkJG1Q","12iXReUz6v4","6YhKVvfzH5I","a2ekT_koK7w","eRWYU7RieiE",
+  "umi7xv16YuM","hYU7NpsfTcE","P27MPi3ZhCg","CgaaqIKjsng","Xv3OCrq6XXg",
+  "oycwr9Z6FPw","aEb5gNsmGJ8","k4fa_ytiIaI","O0lf_fE3HwA","HjI9Mc4VSfc",
+  "lvXzU8yCnys","5i7GEMQC2IY","5erxpOa-Jpg","jFXifxIRBKU","im-YW-Q60d0",
+  "0S7Qu5HMiCA","kxOYvI0pfLo","kOL7aeIDruA","dK9eLe8EQps","uQxLKYt6yAE",
+  "o9WNluqgHTI","W5-8v344vfw","9LcA-4o5nd4","Yy6MN-IX9H8","SOwjSGfIBtQ",
+  "QsoYEmh9KzU","h_W7J5c4lZo","flJ17Irj5Sw","QGJuMBdaqIw","Ssq-lXWwiz4",
+  "8RI-zkw57Ik","bgmMpT_m-t4","oGpFcHTxjZs","9rlNpWYQunY","XDeiovnCv1o"
+];
+
+const listaElem = document.getElementById('lista');
+const player = document.getElementById('player');
+
+// Prikaz liste
+videoIds.forEach((id, i) => {
+  const li = document.createElement('li');
+  li.innerHTML = `<a onclick="pustiVideo('${id}')">🎥 Video ${i+1}</a>`;
+  listaElem.appendChild(li);
+});
+
+// Funkcija za puštanje videa
+function pustiVideo(id){
+  player.src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+}
+
+// Početni video (prvi iz liste)
+pustiVideo(videoIds[0]);
+</script>
+
+</body>
+</html>
