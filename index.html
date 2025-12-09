@@ -1,57 +1,82 @@
-<!DOCTYPE html>
-<html lang="sr">
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Mini YouTube plejlista</title>
-<style>
-  body { font-family:sans-serif; background:#111; color:#fff; text-align:center; margin:20px; }
-  #player { width:80vw; height:45vw; max-width:960px; max-height:540px; border:none; border-radius:12px; margin-bottom:20px; }
-  ul { list-style:none; padding:0; margin:0 auto; max-width:600px; text-align:left; }
-  li { margin:6px 0; }
-  a { color:#0ff; text-decoration:none; cursor:pointer; }
-  a:hover { text-decoration:underline; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Local Loader</title>
+  <style>
+    html,body{height:100%;margin:0}
+    #app{height:100%;display:flex;flex-direction:column}
+    #toolbar{padding:8px;background:#111;color:#fff;font-family:sans-serif}
+    #frame{flex:1;border:0;width:100%}
+    #message{padding:12px;font-family:sans-serif}
+  </style>
 </head>
 <body>
+  <div id="app">
+    <div id="toolbar">
+      <strong>Local Loader</strong>
+      <span style="margin-left:12px;font-size:0.9em">Fragment length: <span id="len">0</span></span>
+    </div>
 
-<h2>🎬 Mini YouTube plejlista</h2>
+    <div id="message">Učitavam iz fragmenta...</div>
 
-<iframe id="player" src="" allowfullscreen></iframe>
-
-<ul id="lista"></ul>
+    <!-- sandbox iframe: promenite sandbox atribut ako želite da omogućite npr. lokalne skripte -->
+    <iframe id="frame" sandbox="allow-same-origin allow-scripts"></iframe>
+  </div>
 
 <script>
-const videoIds = [
-  "xoOG41_CmfY?rel=0","xwWJ0l0ItA0","7OsK2bB7cos","z6ivrP4hyX0","LPgvNlrBfb0",
-  "yzJFgk2H6fg","M7KWEXdUG80","xq0HdQpem1E","N0U0RFhuUTA","yDF0Mawspg8",
-  "P1K0FxkJG1Q","12iXReUz6v4","6YhKVvfzH5I","a2ekT_koK7w","eRWYU7RieiE",
-  "umi7xv16YuM","hYU7NpsfTcE","P27MPi3ZhCg","CgaaqIKjsng","Xv3OCrq6XXg",
-  "oycwr9Z6FPw","aEb5gNsmGJ8","k4fa_ytiIaI","O0lf_fE3HwA","HjI9Mc4VSfc",
-  "lvXzU8yCnys","5i7GEMQC2IY","5erxpOa-Jpg","jFXifxIRBKU","im-YW-Q60d0",
-  "0S7Qu5HMiCA","kxOYvI0pfLo","kOL7aeIDruA","dK9eLe8EQps","uQxLKYt6yAE",
-  "o9WNluqgHTI","W5-8v344vfw","9LcA-4o5nd4","Yy6MN-IX9H8","SOwjSGfIBtQ",
-  "QsoYEmh9KzU","h_W7J5c4lZo","flJ17Irj5Sw","QGJuMBdaqIw","Ssq-lXWwiz4",
-  "8RI-zkw57Ik","bgmMpT_m-t4","oGpFcHTxjZs","9rlNpWYQunY","XDeiovnCv1o"
-];
+(function(){
+  const message = document.getElementById('message');
+  const frame = document.getElementById('frame');
+  const lenSpan = document.getElementById('len');
 
-const listaElem = document.getElementById('lista');
-const player = document.getElementById('player');
+  // Uzima raw hash bez vodećeg '#'
+  let raw = location.hash ? location.hash.slice(1) : '';
 
-// Prikaz liste
-videoIds.forEach((id, i) => {
-  const li = document.createElement('li');
-  li.innerHTML = `<a onclick="pustiVideo('${id}')">🎥 Video ${i+1}</a>`;
-  listaElem.appendChild(li);
-});
+  // Ako hash počinje sa "b64," tretiramo kao base64; ako ne, tretiramo kao percent-encoded
+  function decodePayload(s){
+    if(!s) return '';
+    try{
+      if(s.startsWith('b64,')){
+        // ukloni prefix i dekodiraj base64 (globalno bez URI-problema)
+        return atob(s.slice(4));
+      } else {
+        // percent-dekodiranje (encodeURIComponent sa lokala)
+        return decodeURIComponent(s);
+      }
+    }catch(e){
+      console.error('Decode failed', e);
+      return '';
+    }
+  }
 
-// Funkcija za puštanje videa
-function pustiVideo(id){
-  player.src = `https://www.music.youtube.com/embed/${id}?autoplay=1`;
-}
+  lenSpan.textContent = raw.length;
 
-// Početni video (prvi iz liste)
-pustiVideo(videoIds[0]);
+  if(!raw){
+    message.textContent = 'Nema koda u fragmentu. Pokrenite lokalni fajl koji preusmerava na ovaj URL sa #kod-ovde';
+    return;
+  }
+
+  // Dekodiraj
+  const html = decodePayload(raw);
+
+  if(!html){
+    message.textContent = 'Neuspelo dekodiranje fragmenta ili prazan sadržaj.';
+    return;
+  }
+
+  // Učitaj u sandbox iframe preko srcdoc (izbegava direktno innerHTML na roditelju)
+  try{
+    frame.srcdoc = html;
+    message.style.display = 'none';
+  }catch(e){
+    // fallback: data URI ako browser ne podržava srcdoc
+    frame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    message.style.display = 'none';
+  }
+
+})();
 </script>
-
 </body>
 </html>
