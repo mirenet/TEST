@@ -16,57 +16,108 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        text-align: center;
     }
 
     #container {
-        width: 100%;
+        width: calc(100% - 80px); /* 40px sa obe strane */
         max-width: 400px;
-        padding: 20px;
+        padding: 30px;
+        background: #1e1e1e;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        text-align: center;
+        box-sizing: border-box;
     }
 
-    h2 {
-        margin-bottom: 25px;
-        font-size: 22px;
-        font-weight: 500;
-        line-height: 1.4;
-    }
+h2 {
+    margin-bottom: 15px;
+    font-size: 16px; /* smanjen sa 20px na 18px */
+    font-weight: 500;
+    line-height: 1.4;
+}
 
-    #pickBtn {
-        appearance: none;
-        background: #2b2b2b;
-        color: #fff;
-        padding: 14px 28px;
-        font-size: 18px;
-        border: none;
-        border-radius: 8px;
-        width: 100%;
-        cursor: pointer;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        transition: background 0.2s, transform 0.2s;
-    }
+input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px; /* smanjen sa 16px */
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
 
-    #pickBtn:active {
+button {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px; /* smanjen sa 16px */
+    border: none;
+    border-radius: 8px;
+    background: #2b2b2b;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    transition: background 0.2s, transform 0.2s;
+}
+
+    button:active {
         transform: scale(0.97);
         background: #3a3a3a;
     }
 </style>
 </head>
-
 <body>
-
-<div id="container"></div>
+<div id="container">
+    <h2>Enter Password:</h2>
+    <input type="password" id="passwordInput" placeholder="Your Password...">
+    <button id="submitBtn">Enter</button>
+</div>
 
 <script>
 // ===============================
-// DB – koristimo IndexedDB
+// SALT I HASH LOZINKE (PBKDF2 + SHA-512)
+// ===============================
+const SALT = "YOUR-SALT";
+const STORED_HASH = "YOUR-HASH"; 
+
+async function hashPassword(password, salt) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(password),
+        {name: "PBKDF2"},
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+
+    const key = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: enc.encode(salt),
+            iterations: 100000,
+            hash: "SHA-512"
+        },
+        keyMaterial,
+        {name: "AES-GCM", length: 256},
+        true,
+        ["encrypt", "decrypt"]
+    );
+
+    const rawKey = await crypto.subtle.exportKey("raw", key);
+    return btoa(String.fromCharCode(...new Uint8Array(rawKey)));
+}
+
+async function checkPassword(password) {
+    const hashed = await hashPassword(password, SALT);
+    return hashed === STORED_HASH;
+}
+
+// ===============================
+// DB – IndexedDB
 // ===============================
 function openDB() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open("localHTMLdb", 1);
-        req.onupgradeneeded = () => {
-            req.result.createObjectStore("htmlStore");
-        };
+        req.onupgradeneeded = () => req.result.createObjectStore("htmlStore");
         req.onsuccess = () => resolve(req.result);
         req.onerror = e => reject(e);
     });
@@ -89,9 +140,8 @@ async function loadHTML() {
     });
 }
 
-
 // ===============================
-// UČITAJ HTML U STRANICU
+// Pokreni HTML
 // ===============================
 function runHTML(html){
     document.open();
@@ -99,37 +149,46 @@ function runHTML(html){
     document.close();
 }
 
-
 // ===============================
-// START LOADERA
+// Loader
 // ===============================
 (async function() {
-
-    // 1) Pokusaj auto-load
     const previous = await loadHTML();
-
     if (previous) {
-        runHTML(previous);
+        runHTML(previous); // već lokalno sačuvan HTML, pokreni odmah
+        return;
+    }
+    // Ostani na lozinkom polju
+})();
+
+// ===============================
+// Dugme za lozinku
+// ===============================
+document.getElementById("submitBtn").onclick = async () => {
+    const pw = document.getElementById("passwordInput").value;
+    if (!pw) return;
+
+    const ok = await checkPassword(pw);
+    if (!ok) {
+        alert("Wrong password!");
         return;
     }
 
-    // 2) Ako nema fajla – prikazi UI
+    // Lozinka tačna, prikaži picker UI
     showPickerUI();
-
-})();
-
+};
 
 // ===============================
-// UI ZA PRVI INSTALL
+// UI za prvi install
 // ===============================
 function showPickerUI() {
-    document.getElementById("container").innerHTML = `
-        <h2>Install your app…</h2>
-        <button id="pickBtn">Install</button>
+    const container = document.getElementById("container");
+    container.innerHTML = `
+        <h2>Welcome!<br>Select html for installation…<br><br></h2>
+        <button id="pickBtn">HTML</button>
     `;
 
     document.getElementById("pickBtn").onclick = async () => {
-
         const [handle] = await window.showOpenFilePicker({
             types: [{ description: "HTML Files", accept: {"text/html": [".html"]} }]
         });
@@ -137,12 +196,10 @@ function showPickerUI() {
         const file = await handle.getFile();
         const text = await file.text();
 
-        await saveHTML(text);  // sacuvaj u IndexedDB
-
+        await saveHTML(text);  // sačuvaj u IndexedDB
         runHTML(text); // pokreni app
     };
 }
 </script>
-
 </body>
 </html>
