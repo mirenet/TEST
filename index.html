@@ -1,82 +1,111 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="sr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Local Loader</title>
-  <style>
-    html,body{height:100%;margin:0}
-    #app{height:100%;display:flex;flex-direction:column}
-    #toolbar{padding:8px;background:#111;color:#fff;font-family:sans-serif}
-    #frame{flex:1;border:0;width:100%}
-    #message{padding:12px;font-family:sans-serif}
-  </style>
+  <meta charset="UTF-8">
+  <title>Smart HTML Loader</title>
 </head>
 <body>
-  <div id="app">
-    <div id="toolbar">
-      <strong>Local Loader</strong>
-      <span style="margin-left:12px;font-size:0.9em">Fragment length: <span id="len">0</span></span>
-    </div>
-
-    <div id="message">Učitavam iz fragmenta...</div>
-
-    <!-- sandbox iframe: promenite sandbox atribut ako želite da omogućite npr. lokalne skripte -->
-    <iframe id="frame" sandbox="allow-same-origin allow-scripts"></iframe>
-  </div>
 
 <script>
-(function(){
-  const message = document.getElementById('message');
-  const frame = document.getElementById('frame');
-  const lenSpan = document.getElementById('len');
+// ==========================================
+//  POKUŠAJ AUTOMATSKOG OTVARANJA POSLEDNJEG FAJLA
+// ==========================================
+(async function(){
 
-  // Uzima raw hash bez vodećeg '#'
-  let raw = location.hash ? location.hash.slice(1) : '';
+    // Ako postoji sačuvan handle → pokušaj da ga otvoriš
+    const saved = localStorage.getItem("lastHTMLhandle");
 
-  // Ako hash počinje sa "b64," tretiramo kao base64; ako ne, tretiramo kao percent-encoded
-  function decodePayload(s){
-    if(!s) return '';
-    try{
-      if(s.startsWith('b64,')){
-        // ukloni prefix i dekodiraj base64 (globalno bez URI-problema)
-        return atob(s.slice(4));
-      } else {
-        // percent-dekodiranje (encodeURIComponent sa lokala)
-        return decodeURIComponent(s);
-      }
-    }catch(e){
-      console.error('Decode failed', e);
-      return '';
+    if (saved) {
+        try {
+            const handle = await window.showFileSystemPicker
+                ? await deserializeHandle(saved)
+                : null;
+
+            if (handle) {
+                const perm = await handle.queryPermission({mode:"read"});
+
+                if (perm === "granted") {
+                    const file = await handle.getFile();
+                    const text = await file.text();
+                    runHTML(text);
+                    return;
+                }
+            }
+        } catch(e){
+            console.log("Auto load failed:", e);
+        }
     }
-  }
 
-  lenSpan.textContent = raw.length;
-
-  if(!raw){
-    message.textContent = 'Nema koda u fragmentu. Pokrenite lokalni fajl koji preusmerava na ovaj URL sa #kod-ovde';
-    return;
-  }
-
-  // Dekodiraj
-  const html = decodePayload(raw);
-
-  if(!html){
-    message.textContent = 'Neuspelo dekodiranje fragmenta ili prazan sadržaj.';
-    return;
-  }
-
-  // Učitaj u sandbox iframe preko srcdoc (izbegava direktno innerHTML na roditelju)
-  try{
-    frame.srcdoc = html;
-    message.style.display = 'none';
-  }catch(e){
-    // fallback: data URI ako browser ne podržava srcdoc
-    frame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
-    message.style.display = 'none';
-  }
+    // Ako nismo uspeli → prikaži uploader
+    showUploader();
 
 })();
+
+
+// ==========================================
+//  FUNKCIJA: POKREĆE TVOJ HTML
+// ==========================================
+function runHTML(html){
+    document.open();
+    document.write(html);
+    document.close();
+}
+
+
+// ==========================================
+//  FUNKCIJA: PRIKAŽI UPLOADER ZA BIRANJE FAJLA
+// ==========================================
+function showUploader(){
+    document.body.innerHTML = `
+        <h2>Izaberi svoj lokalni HTML fajl</h2>
+        <input type="file" id="fileInput" accept=".html">
+    `;
+
+    document.getElementById("fileInput").addEventListener("change", async (ev) => {
+        const file = ev.target.files[0];
+        if (!file) return;
+
+        // Sačuvaj file handle ako browser podržava
+        if (ev.target.files[0].handle) {
+            const handle = ev.target.files[0].handle;
+            const serialized = await serializeHandle(handle);
+            localStorage.setItem("lastHTMLhandle", serialized);
+        }
+
+        const text = await file.text();
+        runHTML(text);
+    });
+}
+
+
+// ==========================================
+//  SERIJALIZACIJA FILE HANDLE-a (Chrome only)
+// ==========================================
+async function serializeHandle(handle){
+    return await window.navigator.storage.getDirectory().then(async dir => {
+        try {
+            const key = 'savedHandle';
+            await dir.values().next();
+            await dir.setItem(key, handle);
+            return key;
+        } catch(e){
+            console.error("Serialize error:", e);
+            return null;
+        }
+    });
+}
+
+async function deserializeHandle(key){
+    return await window.navigator.storage.getDirectory().then(async dir => {
+        try {
+            return await dir.getItem(key);
+        } catch(e){
+            console.error("Deserialize error:", e);
+            return null;
+        }
+    });
+}
 </script>
+
 </body>
 </html>
