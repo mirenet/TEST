@@ -1,50 +1,44 @@
 <!DOCTYPE html>
 <html lang="sr">
 <head>
-  <meta charset="UTF-8">
-  <title>Smart HTML Loader</title>
+<meta charset="UTF-8">
+<title>Smart HTML Loader</title>
 </head>
 <body>
 
 <script>
-// ==========================================
-//  POKUŠAJ AUTOMATSKOG OTVARANJA POSLEDNJEG FAJLA
-// ==========================================
+// =====================================================
+//  1) PROBAJ DA UČITAŠ POSLEDNJI FAJL AUTOMATSKI
+// =====================================================
 (async function(){
 
-    // Ako postoji sačuvan handle → pokušaj da ga otvoriš
-    const saved = localStorage.getItem("lastHTMLhandle");
+    const saved = localStorage.getItem("htmlHandle");
 
     if (saved) {
         try {
-            const handle = await window.showFileSystemPicker
-                ? await deserializeHandle(saved)
-                : null;
+            const handle = await deserializeHandle(saved);
 
-            if (handle) {
-                const perm = await handle.queryPermission({mode:"read"});
-
-                if (perm === "granted") {
-                    const file = await handle.getFile();
-                    const text = await file.text();
-                    runHTML(text);
-                    return;
-                }
+            const perm = await handle.queryPermission({mode:"read"});
+            if (perm === "granted") {
+                const file = await handle.getFile();
+                const text = await file.text();
+                runHTML(text);
+                return;
             }
-        } catch(e){
-            console.log("Auto load failed:", e);
+        } catch(e) {
+            console.warn("Auto load failed:", e);
         }
     }
 
-    // Ako nismo uspeli → prikaži uploader
-    showUploader();
+    // Ako nismo uspeli → prikaži dugme za izbor fajla
+    showPicker();
 
 })();
 
 
-// ==========================================
-//  FUNKCIJA: POKREĆE TVOJ HTML
-// ==========================================
+// =====================================================
+//  2) POKREĆE TVOJ HTML
+// =====================================================
 function runHTML(html){
     document.open();
     document.write(html);
@@ -52,58 +46,42 @@ function runHTML(html){
 }
 
 
-// ==========================================
-//  FUNKCIJA: PRIKAŽI UPLOADER ZA BIRANJE FAJLA
-// ==========================================
-function showUploader(){
+// =====================================================
+//  3) DUGME ZA BIRANJE LOKALNOG HTML FAJLA
+// =====================================================
+function showPicker(){
     document.body.innerHTML = `
-        <h2>Izaberi svoj lokalni HTML fajl</h2>
-        <input type="file" id="fileInput" accept=".html">
+        <h2>Izaberi HTML fajl</h2>
+        <button id="pickBtn">Izaberi fajl</button>
     `;
 
-    document.getElementById("fileInput").addEventListener("change", async (ev) => {
-        const file = ev.target.files[0];
-        if (!file) return;
+    document.getElementById("pickBtn").onclick = async () => {
+        const [handle] = await window.showOpenFilePicker({
+            types: [{ description: "HTML Files", accept: {"text/html": [".html"]} }]
+        });
 
-        // Sačuvaj file handle ako browser podržava
-        if (ev.target.files[0].handle) {
-            const handle = ev.target.files[0].handle;
-            const serialized = await serializeHandle(handle);
-            localStorage.setItem("lastHTMLhandle", serialized);
-        }
+        localStorage.setItem("htmlHandle", await serializeHandle(handle));
 
+        const file = await handle.getFile();
         const text = await file.text();
         runHTML(text);
-    });
+    };
 }
 
 
-// ==========================================
-//  SERIJALIZACIJA FILE HANDLE-a (Chrome only)
-// ==========================================
+// =====================================================
+//  4) SERIJALIZACIJA FILE HANDLE-A
+// =====================================================
+// Chrome čuva handle u OPFs-u (origin private file system)
 async function serializeHandle(handle){
-    return await window.navigator.storage.getDirectory().then(async dir => {
-        try {
-            const key = 'savedHandle';
-            await dir.values().next();
-            await dir.setItem(key, handle);
-            return key;
-        } catch(e){
-            console.error("Serialize error:", e);
-            return null;
-        }
-    });
+    const root = await navigator.storage.getDirectory();
+    await root.putFileHandle("saved.html", handle);
+    return "saved.html";
 }
 
 async function deserializeHandle(key){
-    return await window.navigator.storage.getDirectory().then(async dir => {
-        try {
-            return await dir.getItem(key);
-        } catch(e){
-            console.error("Deserialize error:", e);
-            return null;
-        }
-    });
+    const root = await navigator.storage.getDirectory();
+    return await root.getFileHandle(key);
 }
 </script>
 
