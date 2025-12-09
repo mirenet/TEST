@@ -2,87 +2,91 @@
 <html lang="sr">
 <head>
 <meta charset="UTF-8">
-<title>Smart HTML Loader</title>
+<title>Smart Local HTML Loader</title>
 </head>
 <body>
 
 <script>
-// =====================================================
-//  1) PROBAJ DA UČITAŠ POSLEDNJI FAJL AUTOMATSKI
-// =====================================================
-(async function(){
+// ===============================
+// DB – koristimo IndexedDB
+// ===============================
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open("localHTMLdb", 1);
+        req.onupgradeneeded = () => {
+            req.result.createObjectStore("htmlStore");
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = e => reject(e);
+    });
+}
 
-    const saved = localStorage.getItem("htmlHandle");
+async function saveHTML(text) {
+    const db = await openDB();
+    const tx = db.transaction("htmlStore", "readwrite");
+    tx.objectStore("htmlStore").put(text, "lastHTML");
+    return tx.complete;
+}
 
-    if (saved) {
-        try {
-            const handle = await deserializeHandle(saved);
-
-            const perm = await handle.queryPermission({mode:"read"});
-            if (perm === "granted") {
-                const file = await handle.getFile();
-                const text = await file.text();
-                runHTML(text);
-                return;
-            }
-        } catch(e) {
-            console.warn("Auto load failed:", e);
-        }
-    }
-
-    // Ako nismo uspeli → prikaži dugme za izbor fajla
-    showPicker();
-
-})();
+async function loadHTML() {
+    const db = await openDB();
+    return new Promise(resolve => {
+        const tx = db.transaction("htmlStore", "readonly");
+        const req = tx.objectStore("htmlStore").get("lastHTML");
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+    });
+}
 
 
-// =====================================================
-//  2) POKREĆE TVOJ HTML
-// =====================================================
-function runHTML(html){
+// ===============================
+// UČITAJ HTML U STRANICU
+// ===============================
+function runHTML(html) {
     document.open();
     document.write(html);
     document.close();
 }
 
 
-// =====================================================
-//  3) DUGME ZA BIRANJE LOKALNOG HTML FAJLA
-// =====================================================
-function showPicker(){
+// ===============================
+// START LOADERA
+// ===============================
+(async function() {
+
+    // 1) Probaj prvo da učitaš iz IndexedDB
+    const previous = await loadHTML();
+
+    if (previous) {
+        // Auto-start aplikacije!
+        runHTML(previous);
+        return;
+    }
+
+    // 2) Ako nema sačuvanog fajla → prikaži picker
     document.body.innerHTML = `
-        <h2>Izaberi HTML fajl</h2>
+        <h2>Izaberi svoj lokalni HTML fajl</h2>
         <button id="pickBtn">Izaberi fajl</button>
     `;
 
     document.getElementById("pickBtn").onclick = async () => {
+
+        // Android Chrome podržava picker
         const [handle] = await window.showOpenFilePicker({
             types: [{ description: "HTML Files", accept: {"text/html": [".html"]} }]
         });
 
-        localStorage.setItem("htmlHandle", await serializeHandle(handle));
-
         const file = await handle.getFile();
         const text = await file.text();
+
+        // Sačuvaj sadržaj u IndexedDB
+        await saveHTML(text);
+
+        // Pokreni aplikaciju
         runHTML(text);
     };
-}
 
-
-// =====================================================
-//  4) SERIJALIZACIJA FILE HANDLE-A
-// =====================================================
-// Chrome čuva handle u OPFs-u (origin private file system)
-async function serializeHandle(handle){
-    const root = await navigator.storage.getDirectory();
-    await root.putFileHandle("saved.html", handle);
-    return "saved.html";
-}
-
-async function deserializeHandle(key){
-    const root = await navigator.storage.getDirectory();
-    return await root.getFileHandle(key);
-}
+})();
 </script>
 
 </body>
