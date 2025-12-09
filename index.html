@@ -3,8 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <title>Smart Local HTML Loader</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: #111;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    #container {
+        width: 100%;
+        max-width: 400px;
+        padding: 20px;
+    }
+
+    h2 {
+        margin-bottom: 25px;
+        font-size: 22px;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    #pickBtn {
+        appearance: none;
+        background: #2b2b2b;
+        color: #fff;
+        padding: 14px 28px;
+        font-size: 18px;
+        border: none;
+        border-radius: 8px;
+        width: 100%;
+        cursor: pointer;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        transition: background 0.2s, transform 0.2s;
+    }
+
+    #pickBtn:active {
+        transform: scale(0.97);
+        background: #3a3a3a;
+    }
+</style>
 </head>
+
 <body>
+
+<div id="container"></div>
 
 <script>
 // ===============================
@@ -42,7 +93,7 @@ async function loadHTML() {
 // ===============================
 // UČITAJ HTML U STRANICU
 // ===============================
-function runHTML(html) {
+function runHTML(html){
     document.open();
     document.write(html);
     document.close();
@@ -54,24 +105,31 @@ function runHTML(html) {
 // ===============================
 (async function() {
 
-    // 1) Probaj prvo da učitaš iz IndexedDB
+    // 1) Pokusaj auto-load
     const previous = await loadHTML();
 
     if (previous) {
-        // Auto-start aplikacije!
         runHTML(previous);
         return;
     }
 
-    // 2) Ako nema sačuvanog fajla → prikaži picker
-    document.body.innerHTML = `
-        <h2>Izaberi svoj lokalni HTML fajl</h2>
-        <button id="pickBtn">Izaberi fajl</button>
+    // 2) Ako nema fajla – prikazi UI
+    showPickerUI();
+
+})();
+
+
+// ===============================
+// UI ZA PRVI INSTALL
+// ===============================
+function showPickerUI() {
+    document.getElementById("container").innerHTML = `
+        <h2>Install your app…</h2>
+        <button id="pickBtn">Install</button>
     `;
 
     document.getElementById("pickBtn").onclick = async () => {
 
-        // Android Chrome podržava picker
         const [handle] = await window.showOpenFilePicker({
             types: [{ description: "HTML Files", accept: {"text/html": [".html"]} }]
         });
@@ -79,14 +137,11 @@ function runHTML(html) {
         const file = await handle.getFile();
         const text = await file.text();
 
-        // Sačuvaj sadržaj u IndexedDB
-        await saveHTML(text);
+        await saveHTML(text);  // sacuvaj u IndexedDB
 
-        // Pokreni aplikaciju
-        runHTML(text);
+        runHTML(text); // pokreni app
     };
-
-})();
+}
 </script>
 
 </body>
