@@ -19,7 +19,7 @@
     }
 
     #container {
-        width: calc(100% - 80px); /* 40px sa obe strane */
+        width: calc(100% - 80px);
         max-width: 400px;
         padding: 30px;
         background: #1e1e1e;
@@ -29,35 +29,35 @@
         box-sizing: border-box;
     }
 
-h2 {
-    margin-bottom: 15px;
-    font-size: 16px; /* smanjen sa 20px na 18px */
-    font-weight: 500;
-    line-height: 1.4;
-}
+    h2 {
+        margin-bottom: 15px;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.4;
+    }
 
-input[type="password"] {
-    width: 100%;
-    padding: 10px;
-    font-size: 14px; /* smanjen sa 16px */
-    border-radius: 8px;
-    border: none;
-    margin-bottom: 20px;
-    box-sizing: border-box;
-}
+    input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        font-size: 14px;
+        border-radius: 8px;
+        border: none;
+        margin-bottom: 20px;
+        box-sizing: border-box;
+    }
 
-button {
-    width: 100%;
-    padding: 12px;
-    font-size: 14px; /* smanjen sa 16px */
-    border: none;
-    border-radius: 8px;
-    background: #2b2b2b;
-    color: #fff;
-    cursor: pointer;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-    transition: background 0.2s, transform 0.2s;
-}
+    button {
+        width: 100%;
+        padding: 12px;
+        font-size: 14px;
+        border: none;
+        border-radius: 8px;
+        background: #2b2b2b;
+        color: #fff;
+        cursor: pointer;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        transition: background 0.2s, transform 0.2s;
+    }
 
     button:active {
         transform: scale(0.97);
@@ -74,10 +74,10 @@ button {
 
 <script>
 // ===============================
-// SALT I HASH LOZINKE (PBKDF2 + SHA-512)
+// SALT + HASH (PBKDF2 + SHA512)
 // ===============================
-const SALT = "5L6Aqshfo6iy58SzImISOQ==";
-const STORED_HASH = "AbTmvXmGs2IYDnYACO35y99R/b1C6Wgt7xrFN6IBD1c="; 
+const SALT = "XW2kOEmmMGC0cH8Uwqa8LA==";
+const STORED_HASH = "xfGCOLv3hUqpoaLkLfFhPfZjUwOYcQisuLZONgYi0Nc=";
 
 async function hashPassword(password, salt) {
     const enc = new TextEncoder();
@@ -112,7 +112,7 @@ async function checkPassword(password) {
 }
 
 // ===============================
-// DB – IndexedDB
+// IndexedDB
 // ===============================
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -150,15 +150,14 @@ function runHTML(html){
 }
 
 // ===============================
-// Loader
+// Start – ako već postoji HTML, odmah ga učitaj
 // ===============================
 (async function() {
     const previous = await loadHTML();
     if (previous) {
-        runHTML(previous); // već lokalno sačuvan HTML, pokreni odmah
+        runHTML(previous);
         return;
     }
-    // Ostani na lozinkom polju
 })();
 
 // ===============================
@@ -174,30 +173,35 @@ document.getElementById("submitBtn").onclick = async () => {
         return;
     }
 
-    // Lozinka tačna, prikaži picker UI
     showPickerUI();
 };
 
 // ===============================
-// UI za prvi install
+// UI za instalaciju
 // ===============================
 function showPickerUI() {
     const container = document.getElementById("container");
+
     container.innerHTML = `
-        <h2>Welcome!<br>Select html for installation…<br><br></h2>
+        <h2>Welcome!<br>Select HTML for installation…<br><br></h2>
+        <input type="file" id="fileInput" accept=".html" style="display:none">
         <button id="pickBtn">HTML</button>
     `;
 
-    document.getElementById("pickBtn").onclick = async () => {
-        const [handle] = await window.showOpenFilePicker({
-            types: [{ description: "HTML Files", accept: {"text/html": [".html"]} }]
-        });
+    // Klik → otvori picker
+    document.getElementById("pickBtn").onclick = () => {
+        document.getElementById("fileInput").click();
+    };
 
-        const file = await handle.getFile();
+    // File izabran
+    document.getElementById("fileInput").onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
         const text = await file.text();
 
-        await saveHTML(text);  // sačuvaj u IndexedDB
-        runHTML(text); // pokreni app
+        await saveHTML(text);
+        runHTML(text);
     };
 }
 </script>
