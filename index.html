@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bubble Player UX</title>
-
+<title>Floating YouTube Bubble</title>
 <style>
 body{
     margin:0;
@@ -13,7 +12,7 @@ body{
     overflow:hidden;
 }
 
-/* Bottom controls bar */
+/* Controls */
 #controls-bar{
     position:fixed;
     bottom:20px;
@@ -25,7 +24,6 @@ body{
     z-index:10000;
 }
 
-/* Play button (bubble origin) */
 #play-btn{
     width:70px;
     height:70px;
@@ -40,7 +38,6 @@ body{
     touch-action:none;
 }
 
-/* Stop / Next */
 .ctrl-btn{
     font-size:26px;
     color:white;
@@ -49,57 +46,37 @@ body{
 /* Floating player */
 #floating-player{
     position:fixed;
-    bottom:100px;
-    left:50%;
-    transform:translateX(-50%) scale(0);
     width:260px;
     height:150px;
     background:black;
     border-radius:18px;
     overflow:hidden;
     box-shadow:0 15px 40px rgba(0,0,0,0.6);
-    transition:transform 0.3s ease, border-radius 0.3s ease;
+    transition:transform 0.3s ease,bottom 0.3s ease,left 0.3s ease;
     z-index:9999;
+    display:flex;
+    flex-direction:column;
 }
 
-#floating-player.active{
-    transform:translateX(-50%) scale(1);
-}
-
+/* Drag handle */
 #drag-handle{
-    position:absolute;
-    top:0;
-    left:0;
     width:100%;
     height:25px;
     background:rgba(0,0,0,0.4);
-    z-index:10;
+    cursor:grab;
 }
 
-#resize-handle{
-    position:absolute;
-    width:18px;
-    height:18px;
-    right:0;
-    bottom:0;
-    background:rgba(255,255,255,0.5);
-    border-top-left-radius:6px;
-    z-index:10;
-}
-
+/* Player inside box */
 #player{
-    width:100%;
-    height:100%;
+    flex:1;
 }
 </style>
 </head>
-
 <body>
 
-<div id="floating-player">
+<div id="floating-player" style="display:none">
     <div id="drag-handle"></div>
     <div id="player"></div>
-    <div id="resize-handle"></div>
 </div>
 
 <div id="controls-bar">
@@ -109,71 +86,105 @@ body{
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
-
 <script>
 let player;
-let expanded = false;
-let startY;
-let swipeStartTime;
+let floating = document.getElementById("floating-player");
+let playBtn = document.getElementById("play-btn");
+let startY, startX, swipeStartTime;
+let isDragging = false;
+let offsetX, offsetY;
 
+/* Load saved position */
+let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, bottom:null};
+
+/* YouTube API */
 function onYouTubeIframeAPIReady(){
-    player = new YT.Player('player', {
-        videoId: "dQw4w9WgXcQ",
+    player = new YT.Player('player',{
+        videoId:"dQw4w9WgXcQ",
         playerVars:{
             autoplay:0,
             controls:1,
-            playsinline:1
+            playsinline:1,
+            rel:0
         }
     });
 }
 
-/* Swipe to expand */
-const playBtn = document.getElementById("play-btn");
-const floating = document.getElementById("floating-player");
-
+/* Swipe up to expand */
 playBtn.addEventListener("pointerdown", e=>{
     startY = e.clientY;
+    startX = e.clientX;
     swipeStartTime = Date.now();
 });
 
 playBtn.addEventListener("pointerup", e=>{
     let diff = startY - e.clientY;
-
     if(diff > 50){ // swipe up
-        expandPlayer();
+        showFloating();
+        player.playVideo();
     } else {
         togglePlay();
     }
 });
 
-/* Swipe down to minimize */
-const dragHandle = document.getElementById("drag-handle");
+/* Show floating player near button */
+function showFloating(){
+    floating.style.display="flex";
+    if(savedPos.left !== null){
+        floating.style.left = savedPos.left + "px";
+        floating.style.bottom = savedPos.bottom + "px";
+    } else {
+        // default bottom center
+        floating.style.left = (window.innerWidth/2 - floating.offsetWidth/2) + "px";
+        floating.style.bottom = "90px";
+    }
+}
 
+/* Dragging */
+const dragHandle = document.getElementById("drag-handle");
 dragHandle.addEventListener("pointerdown", e=>{
-    startY = e.clientY;
-    swipeStartTime = Date.now();
+    isDragging=true;
+    offsetX = e.clientX - floating.offsetLeft;
+    offsetY = e.clientY - floating.offsetTop;
+    dragHandle.setPointerCapture(e.pointerId);
 });
 
-dragHandle.addEventListener("pointerup", e=>{
-    let diff = e.clientY - startY;
-    let time = Date.now() - swipeStartTime;
-
-    if(diff > 80 && time < 300){
-        minimizePlayer();
+dragHandle.addEventListener("pointermove", e=>{
+    if(isDragging){
+        floating.style.left = (e.clientX - offsetX) + "px";
+        floating.style.top = (e.clientY - offsetY) + "px";
+        floating.style.bottom = "auto";
     }
 });
 
-function expandPlayer(){
-    floating.classList.add("active");
-    expanded = true;
-    player.playVideo();
+dragHandle.addEventListener("pointerup", e=>{
+    if(isDragging){
+        isDragging=false;
+        savePosition();
+    }
+});
+
+/* Save position */
+function savePosition(){
+    savedPos.left = floating.offsetLeft;
+    savedPos.bottom = window.innerHeight - (floating.offsetTop + floating.offsetHeight);
+    localStorage.setItem("playerPos", JSON.stringify(savedPos));
 }
 
-function minimizePlayer(){
-    floating.classList.remove("active");
-    expanded = false;
+/* Swipe down to minimize */
+dragHandle.addEventListener("pointerup", e=>{
+    let diff = e.clientY - startY;
+    let time = Date.now() - swipeStartTime;
+    if(diff > 80 && time < 300){
+        minimizeFloating();
+    }
+});
+
+function minimizeFloating(){
+    floating.style.display="none";
 }
 
+/* Control buttons */
 function togglePlay(){
     let state = player.getPlayerState();
     if(state == 1){
