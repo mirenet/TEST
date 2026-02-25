@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Floating YouTube Player Playlist</title>
+<title>Floating YouTube Player Playlist Offscreen</title>
 
 <style>
 body{
@@ -25,7 +25,8 @@ body{
     overflow:hidden;
     z-index:9999;
     touch-action:none;
-    display:none;
+    transform: translateY(200vh); /* sakriven offscreen */
+    transition: transform 0.3s ease;
 }
 
 /* Drag area */
@@ -118,7 +119,7 @@ body{
 <script>
 let player;
 
-/* Playlist */
+/* Playlist 15 muzičkih videa */
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
@@ -201,7 +202,7 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON: tap = play, swipe = show/hide */
+/* PLAY BUTTON: tap = play, swipe = show/hide player */
 let startSwipeY;
 playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
@@ -210,7 +211,7 @@ playBtn.addEventListener("pointerdown", e=>{
 playBtn.addEventListener("pointerup", e=>{
     let diffY = startSwipeY - e.clientY;
 
-    // Tap → play video
+    // Tap → play video bez obzira na vidljivost
     let state = player.getPlayerState();
     if(state !== 1){
         player.playVideo();
@@ -218,19 +219,10 @@ playBtn.addEventListener("pointerup", e=>{
 
     // Swipe → show/hide floating player
     if(Math.abs(diffY) > 50){
-        if(box.style.display === "none"){
-            // Pokaži
-            box.style.display="flex";
-            if(savedPos.left !== null && savedPos.top !== null){
-                box.style.left = savedPos.left + "px";
-                box.style.top = savedPos.top + "px";
-            } else {
-                box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
-                box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
-            }
+        if(box.style.transform === "translateY(200vh)"){
+            showPlayer();
         } else {
-            // Sakrij
-            box.style.display="none";
+            hidePlayer();
         }
     }
 });
@@ -245,6 +237,22 @@ nextBtn.addEventListener("click", ()=>{
     player.loadVideoById(playlist[currentIndex]);
     player.playVideo();
 });
+
+/* SHOW/HIDE OFFSCREEN */
+function showPlayer(){
+    if(savedPos.left !== null && savedPos.top !== null){
+        box.style.left = savedPos.left + "px";
+        box.style.top = savedPos.top + "px";
+    } else {
+        box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
+        box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
+    }
+    box.style.transform = "translateY(0)";
+}
+
+function hidePlayer(){
+    box.style.transform = "translateY(200vh)";
+}
 
 /* SAVE POSITION */
 function savePosition(){
