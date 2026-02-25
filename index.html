@@ -201,7 +201,7 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON TOGGLE + SWIPE */
+/* PLAY BUTTON: tap = play, swipe = show/hide */
 let startSwipeY;
 playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
@@ -210,22 +210,28 @@ playBtn.addEventListener("pointerdown", e=>{
 playBtn.addEventListener("pointerup", e=>{
     let diffY = startSwipeY - e.clientY;
 
-    if(box.style.display === "none"){
-        // Ako je player sakriven → pokaži
-        box.style.display="flex";
-        if(savedPos.left !== null && savedPos.top !== null){
-            box.style.left = savedPos.left + "px";
-            box.style.top = savedPos.top + "px";
+    // Tap → play video
+    let state = player.getPlayerState();
+    if(state !== 1){
+        player.playVideo();
+    }
+
+    // Swipe → show/hide floating player
+    if(Math.abs(diffY) > 50){
+        if(box.style.display === "none"){
+            // Pokaži
+            box.style.display="flex";
+            if(savedPos.left !== null && savedPos.top !== null){
+                box.style.left = savedPos.left + "px";
+                box.style.top = savedPos.top + "px";
+            } else {
+                box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
+                box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
+            }
         } else {
-            box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
-            box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
+            // Sakrij
+            box.style.display="none";
         }
-        if(diffY > 50 || diffY < -50){
-            player.playVideo();
-        }
-    } else {
-        // Ako je player vidljiv → minimizuj
-        minimizeToButton();
     }
 });
 
@@ -239,12 +245,6 @@ nextBtn.addEventListener("click", ()=>{
     player.loadVideoById(playlist[currentIndex]);
     player.playVideo();
 });
-
-/* MINIMIZE BACK TO PLAY BUTTON */
-function minimizeToButton(){
-    box.style.display="none";
-    player.pauseVideo();
-}
 
 /* SAVE POSITION */
 function savePosition(){
