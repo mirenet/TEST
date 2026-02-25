@@ -14,7 +14,7 @@ body{
     color:white;
 }
 
-/* Floating box (1x1px iframe) */
+/* Floating box */
 #floating-player{
     position:fixed;
     width:1px;
@@ -25,6 +25,7 @@ body{
     z-index:9999;
     left:0px; /* Levi gornji ugao */
     top:0px;
+    transform: translateX(-5000px); /* Pomeren offscreen */
     transition: transform 0.3s ease;
 }
 
@@ -251,11 +252,11 @@ function showPlayer(){
         box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
         box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
     }
-    box.style.transform = "translateY(0)";
+    box.style.transform = "translateX(0)";
 }
 
 function hidePlayer(){
-    box.style.transform = "translateY(200vh)";
+    box.style.transform = "translateX(-5000px)";
 }
 
 /* SAVE POSITION */
