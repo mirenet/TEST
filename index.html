@@ -14,18 +14,17 @@ body{
     color:white;
 }
 
-/* Floating box */
+/* Floating box (1x1px iframe) */
 #floating-player{
     position:fixed;
-    width:160px;
-    height:90px;
+    width:1px;
+    height:1px;
     background:#000;
-    border-radius:14px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.5);
+    border-radius:2px;
     overflow:hidden;
     z-index:9999;
-    touch-action:none;
-    transform: translateY(1px); /* minimalno vidljivo da WebView ne blokira */
+    left:0px; /* Levi gornji ugao */
+    top:0px;
     transition: transform 0.3s ease;
 }
 
