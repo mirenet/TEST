@@ -3,159 +3,139 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Auto Fill Test</title>
+<title>Floating YouTube Player</title>
 
 <style>
 body{
     margin:0;
-    font-family:Arial;
+    height:200vh;
     background:#111;
+    font-family:Arial;
     color:white;
-    text-align:center;
-    padding-bottom:220px;
 }
 
-.section{
-    margin:20px 0;
-}
-
-input{
-    width:120px;
-    padding:8px;
-    margin:5px 0;
-    font-size:16px;
-    text-align:center;
-}
-
-button{
-    padding:10px;
-    margin-top:10px;
-    font-size:16px;
-    width:140px;
-}
-
-#video-wrapper{
+/* Floating box */
+#floating-player{
     position:fixed;
-    bottom:0;
+    bottom:20px;
+    right:20px;
+    width:160px;
+    height:90px;
+    background:#000;
+    border-radius:14px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.5);
+    overflow:hidden;
+    z-index:9999;
+    touch-action:none;
+}
+
+/* Drag area */
+#drag-handle{
+    position:absolute;
+    top:0;
     left:0;
     width:100%;
-    display:flex;
-    justify-content:center;
+    height:24px;
+    background:rgba(0,0,0,0.4);
+    cursor:grab;
+    z-index:10;
 }
 
-.video-container{
-    position:relative;
-    overflow:hidden;
-    background:black;
-}
-
-.video-container iframe{
+/* Resize handle */
+#resize-handle{
     position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%, -50%);
+    width:18px;
+    height:18px;
+    right:0;
+    bottom:0;
+    background:rgba(255,255,255,0.4);
+    border-top-left-radius:6px;
+    cursor:nwse-resize;
+    z-index:10;
+}
+
+#player{
+    width:100%;
+    height:100%;
 }
 </style>
 </head>
 
 <body>
 
-<h3>PIXELS</h3>
-
-<div class="section">
-    Width (px)<br>
-    <input type="number" id="widthPx" value="240"><br>
-
-    Height (px)<br>
-    <input type="number" id="heightPx" value="140"><br>
-
-    <button onclick="applySize()">APPLY</button>
-</div>
-
-<div>
-    <button onclick="nextVideo()">NEXT ▶</button>
-</div>
-
-<div id="video-wrapper">
-    <div class="video-container" id="container" style="width:240px;height:140px;">
-        <div id="player"></div>
-    </div>
+<div id="floating-player">
+    <div id="drag-handle"></div>
+    <div id="player"></div>
+    <div id="resize-handle"></div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-
-let videos = [
-"dQw4w9WgXcQ",
-"3tmd-ClpJxA",
-"kJQP7kiw5Fk",
-"9bZkp7q19f0",
-"fRh_vgS2dFE",
-"RgKAFK5djSk",
-"OPf0YbXqDm0",
-"JGwWNGJdvx8",
-"YQHsXMglC9A",
-"60ItHLz5WEA"
-];
-
-let current = 0;
 let player;
 
 function onYouTubeIframeAPIReady(){
     player = new YT.Player('player', {
-        videoId: videos[current],
-        playerVars: {
-            autoplay: 1,
-            controls: 1,
-            rel: 0
-        },
-        events: {
-            'onReady': resizeVideo
+        videoId: "dQw4w9WgXcQ",
+        playerVars:{
+            autoplay:1,
+            controls:1,
+            playsinline:1,
+            rel:0
         }
     });
 }
 
-function resizeVideo(){
-    let container = document.getElementById("container");
-    let cw = container.offsetWidth;
-    let ch = container.offsetHeight;
+/* DRAG */
+const box = document.getElementById("floating-player");
+const dragHandle = document.getElementById("drag-handle");
+const resizeHandle = document.getElementById("resize-handle");
 
-    let videoRatio = 16/9; // default
-    let containerRatio = cw/ch;
+let isDragging = false;
+let isResizing = false;
 
-    let width, height;
+let startX, startY, startWidth, startHeight;
 
-    if(containerRatio > videoRatio){
-        width = cw;
-        height = cw / videoRatio;
-    }else{
-        height = ch;
-        width = ch * videoRatio;
+dragHandle.addEventListener("pointerdown", e=>{
+    isDragging = true;
+    startX = e.clientX - box.offsetLeft;
+    startY = e.clientY - box.offsetTop;
+    dragHandle.style.cursor="grabbing";
+});
+
+document.addEventListener("pointermove", e=>{
+    if(isDragging){
+        box.style.left = (e.clientX - startX) + "px";
+        box.style.top = (e.clientY - startY) + "px";
+        box.style.right = "auto";
+        box.style.bottom = "auto";
     }
 
-    let iframe = player.getIframe();
-    iframe.style.width = width + "px";
-    iframe.style.height = height + "px";
-}
+    if(isResizing){
+        let newWidth = startWidth + (e.clientX - startX);
+        let newHeight = startHeight + (e.clientY - startY);
 
-function applySize(){
-    let w = document.getElementById("widthPx").value;
-    let h = document.getElementById("heightPx").value;
+        if(newWidth > 120 && newHeight > 70){
+            box.style.width = newWidth + "px";
+            box.style.height = newHeight + "px";
+        }
+    }
+});
 
-    let container = document.getElementById("container");
-    container.style.width = w + "px";
-    container.style.height = h + "px";
+document.addEventListener("pointerup", ()=>{
+    isDragging = false;
+    isResizing = false;
+    dragHandle.style.cursor="grab";
+});
 
-    setTimeout(resizeVideo, 100);
-}
-
-function nextVideo(){
-    current = (current + 1) % videos.length;
-    player.loadVideoById(videos[current]);
-    setTimeout(resizeVideo, 300);
-}
-
+/* RESIZE */
+resizeHandle.addEventListener("pointerdown", e=>{
+    isResizing = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startWidth = box.offsetWidth;
+    startHeight = box.offsetHeight;
+});
 </script>
 
 </body>
