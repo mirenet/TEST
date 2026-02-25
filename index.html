@@ -25,10 +25,8 @@ body{
     overflow:hidden;
     z-index:9999;
     touch-action:none;
-    transform: translateY(200vh); /* sakriven offscreen */
+    transform: translateY(200vh);
     transition: transform 0.3s ease;
-    left:0px;  /* Gurnuto u donji levi ugao */
-    top:calc(100vh - 1px);  /* 1px visina u donjem levom kutu */
 }
 
 /* Drag area */
@@ -89,16 +87,9 @@ body{
     touch-action:none;
 }
 
-#play-btn{
-    background:#6b8e23;
-}
-#stop-btn{
-    background:#fff;
-    color:black;
-}
-#next-btn{
-    background:#808080;
-}
+#play-btn{ background:#6b8e23; }
+#stop-btn{ background:#fff; color:black; }
+#next-btn{ background:#808080; }
 </style>
 </head>
 
@@ -120,8 +111,9 @@ body{
 
 <script>
 let player;
+let playerReady = false;
 
-/* Playlist 15 muzičkih videa */
+/* Playlist */
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
@@ -137,11 +129,16 @@ function onYouTubeIframeAPIReady(){
             controls:1,
             playsinline:1,
             rel:0
+        },
+        events:{
+            onReady: function(){
+                playerReady = true;
+            }
         }
     });
 }
 
-/* Floating player */
+/* Elements */
 const box = document.getElementById("floating-player");
 const dragHandle = document.getElementById("drag-handle");
 const resizeHandle = document.getElementById("resize-handle");
@@ -175,7 +172,6 @@ document.addEventListener("pointermove", e=>{
     if(isResizing){
         let newWidth = startWidth + (e.clientX - startX);
         let newHeight = startHeight + (e.clientY - startY);
-
         if(newWidth > 120 && newHeight > 70){
             box.style.width = newWidth + "px";
             box.style.height = newHeight + "px";
@@ -183,7 +179,7 @@ document.addEventListener("pointermove", e=>{
     }
 });
 
-document.addEventListener("pointerup", e=>{
+document.addEventListener("pointerup", ()=>{
     if(isDragging){
         isDragging=false;
         dragHandle.style.cursor="grab";
@@ -204,22 +200,23 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON: tap = play, swipe = show/hide player */
-let startSwipeY;
+/* PLAY BUTTON FIX (WebView compatible) */
+let startSwipeY = 0;
+
 playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
 });
 
+/* PLAY mora biti na CLICK */
+playBtn.addEventListener("click", ()=>{
+    if(!playerReady) return;
+    player.playVideo();
+});
+
+/* Swipe show/hide */
 playBtn.addEventListener("pointerup", e=>{
     let diffY = startSwipeY - e.clientY;
 
-    // Tap → play video bez obzira na vidljivost
-    let state = player.getPlayerState();
-    if(state !== 1){
-        player.playVideo();
-    }
-
-    // Swipe → show/hide floating player
     if(Math.abs(diffY) > 50){
         if(box.style.transform === "translateY(200vh)"){
             showPlayer();
@@ -229,18 +226,19 @@ playBtn.addEventListener("pointerup", e=>{
     }
 });
 
-/* STOP / NEXT BUTTONS */
+/* STOP / NEXT */
 stopBtn.addEventListener("click", ()=>{
-    player.pauseVideo();
+    if(playerReady) player.pauseVideo();
 });
 
 nextBtn.addEventListener("click", ()=>{
+    if(!playerReady) return;
     currentIndex = (currentIndex + 1) % playlist.length;
     player.loadVideoById(playlist[currentIndex]);
     player.playVideo();
 });
 
-/* SHOW/HIDE OFFSCREEN */
+/* SHOW/HIDE */
 function showPlayer(){
     if(savedPos.left !== null && savedPos.top !== null){
         box.style.left = savedPos.left + "px";
