@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Mobile Size Test</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:#111;
+    color:white;
+    text-align:center;
+    padding-bottom:220px; /* prostor da kontrole ne preklapaju video */
+}
+
+.controls{
+    padding:10px;
+}
+
+input{
+    width:100px;
+    padding:6px;
+    margin:5px 0;
+    font-size:16px;
+    text-align:center;
+}
+
+button{
+    padding:10px;
+    margin-top:8px;
+    font-size:16px;
+    width:120px;
+}
+
+.section{
+    margin-bottom:20px;
+}
+
+#video-wrapper{
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    background:black;
+    display:flex;
+    justify-content:center;
+    align-items:flex-end;
+}
+
+iframe{
+    border:none;
+}
+</style>
+</head>
+
+<body>
+
+<h3>PIXELS</h3>
+
+<div class="section">
+    <div>
+        Width (px)
+        <br>
+        <input type="number" id="widthPx" value="320">
+    </div>
+
+    <div>
+        Height (px)
+        <br>
+        <input type="number" id="heightPx" value="180">
+    </div>
+
+    <button onclick="applyPx()">APPLY</button>
+</div>
+
+<h3>CENTIMETERS</h3>
+
+<div class="section">
+    <div>
+        Width (cm)
+        <br>
+        <input type="number" step="0.1" id="widthCm" value="8">
+    </div>
+
+    <div>
+        Height (cm)
+        <br>
+        <input type="number" step="0.1" id="heightCm" value="4.5">
+    </div>
+
+    <button onclick="applyCm()">APPLY</button>
+</div>
+
+<div>
+    <button onclick="nextVideo()">NEXT ▶</button>
+</div>
+
+<div id="video-wrapper">
+    <iframe id="player"
+        width="320"
+        height="180"
+        src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+        allow="autoplay; encrypted-media"
+        allowfullscreen>
+    </iframe>
+</div>
+
+<script>
+
+let videos = [
+"dQw4w9WgXcQ",
+"3tmd-ClpJxA",
+"kJQP7kiw5Fk",
+"9bZkp7q19f0",
+"fRh_vgS2dFE",
+"RgKAFK5djSk",
+"OPf0YbXqDm0",
+"JGwWNGJdvx8",
+"YQHsXMglC9A",
+"60ItHLz5WEA"
+];
+
+let current = 0;
+
+function nextVideo(){
+    current = (current + 1) % videos.length;
+    document.getElementById("player").src =
+        "https://www.youtube.com/embed/" + videos[current] + "?autoplay=1";
+}
+
+function applyPx(){
+    let w = document.getElementById("widthPx").value;
+    let h = document.getElementById("heightPx").value;
+
+    document.getElementById("player").width = w;
+    document.getElementById("player").height = h;
+}
+
+function applyCm(){
+    let wcm = document.getElementById("widthCm").value;
+    let hcm = document.getElementById("heightCm").value;
+
+    let pxPerCm = 96 / 2.54; // CSS standard
+
+    let wpx = wcm * pxPerCm;
+    let hpx = hcm * pxPerCm;
+
+    document.getElementById("player").width = wpx;
+    document.getElementById("player").height = hpx;
+
+    document.getElementById("widthPx").value = Math.round(wpx);
+    document.getElementById("heightPx").value = Math.round(hpx);
+}
+
+</script>
+
+</body>
+</html>
