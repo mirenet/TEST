@@ -46,14 +46,14 @@ button{
 <body>
 <div class="wrap">
 
-<h2>YouTube autoplay (muted) + Unmute dugme</h2>
+<h2>YouTube autoplay (muted) + Unmute + Play</h2>
 
 <div class="player-wrap">
   <div id="player"></div>
 </div>
 
 <div class="controls">
-  <button id="muteToggle">Unmute</button>
+  <button id="muteToggle">Unmute & Play</button>
 </div>
 
 </div>
@@ -63,7 +63,7 @@ button{
 let player;
 let isMuted = true;
 
-// VIDEO ID – samo ovo menjaš
+// MENJAŠ SAMO OVO
 const VIDEO_ID = "79fzeNUqQbQ";
 
 function onYouTubeIframeAPIReady() {
@@ -78,8 +78,8 @@ function onYouTubeIframeAPIReady() {
     },
     events: {
       onReady: function(event) {
-        event.target.playVideo();
         event.target.mute();
+        event.target.playVideo();
       }
     }
   });
@@ -91,11 +91,12 @@ document.getElementById("muteToggle").addEventListener("click", function(){
 
   if (isMuted) {
     player.unMute();
+    player.playVideo();   // 🔥 KLJUČNA LINIJA
     this.textContent = "Mute";
     isMuted = false;
   } else {
     player.mute();
-    this.textContent = "Unmute";
+    this.textContent = "Unmute & Play";
     isMuted = true;
   }
 
