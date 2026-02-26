@@ -3,93 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Floating YouTube Player - Fix</title>
+<title>Floating YouTube Player Playlist Offscreen</title>
 
 <style>
-body{
-    margin:0;
-    height:200vh;
-    background:#111;
-    font-family:Arial;
-    color:white;
-}
-
-/* Floating box */
-#floating-player{
-    position:fixed;
-    width:160px;
-    height:90px;
-    background:#000;
-    border-radius:14px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.5);
-    overflow:hidden;
-    z-index:9999;
-    touch-action:none;
-    transform: translateY(200vh); /* sakriven offscreen */
-    transition: transform 0.3s ease;
-    left: 20px;
-    top: 20px;
-}
-
-/* Drag area */
-#drag-handle{
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:24px;
-    background:rgba(0,0,0,0.4);
-    cursor:grab;
-    z-index:10;
-}
-
-/* Resize handle */
-#resize-handle{
-    position:absolute;
-    width:18px;
-    height:18px;
-    right:0;
-    bottom:0;
-    background:rgba(255,255,255,0.4);
-    border-top-left-radius:6px;
-    cursor:nwse-resize;
-    z-index:10;
-}
-
-#player{
-    width:100%;
-    height:100%;
-    pointer-events: auto; /* Dozvoli klik na sam video ako zatreba */
-}
-
-/* Controls bar */
-#controls-bar{
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
-    display:flex;
-    align-items:center;
-    gap:20px;
-    z-index:10000;
-}
-
-/* Buttons */
-.ctrl-btn{
-    width:70px;
-    height:70px;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:28px;
-    font-weight:bold;
-    color:black;
-    background:#444;
-    user-select:none;
-    touch-action:none;
-}
-
+/* (tvoj stil ostaje isti) */
+body{ margin:0; height:200vh; background:#111; font-family:Arial; color:white; }
+#floating-player{ position:fixed; width:160px; height:90px; background:#000; border-radius:14px; box-shadow:0 10px 25px rgba(0,0,0,0.5); overflow:hidden; z-index:9999; touch-action:none; transform: translateY(200vh); transition: transform 0.3s ease; }
+#drag-handle{ position:absolute; top:0; left:0; width:100%; height:24px; background:rgba(0,0,0,0.4); cursor:grab; z-index:10; }
+#resize-handle{ position:absolute; width:18px; height:18px; right:0; bottom:0; background:rgba(255,255,255,0.4); border-top-left-radius:6px; cursor:nwse-resize; z-index:10; }
+#player{ width:100%; height:100%; }
+#controls-bar{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:20px; z-index:10000; }
+.ctrl-btn{ width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:bold; color:black; background:#444; user-select:none; touch-action:none; }
 #play-btn{ background:#6b8e23; }
 #stop-btn{ background:#fff; color:black; }
 #next-btn{ background:#808080; }
@@ -110,38 +34,47 @@ body{
     <div class="ctrl-btn" id="next-btn">⏭</div>
 </div>
 
-<script src="https://www.youtube.com"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 let player;
+
+/* Playlist */
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
   "09R8_2nJtjg","YqeW9_5kURI","fLexgOxsZu0","K0ibBPhiaG0","d9MyW72ELq0"
 ];
 let currentIndex = 0;
-let isPlayerReady = false;
 
 function onYouTubeIframeAPIReady(){
     player = new YT.Player('player', {
         videoId: playlist[currentIndex],
         playerVars:{
-            autoplay: 0,
-            controls: 1,
-            playsinline: 1,
-            rel: 0,
-            mute: 1 // OBAVEZNO: Omogućava start bez blokade
+            autoplay:0,       // ne auto-play bez geste
+            controls:1,
+            playsinline:1,
+            rel:0,
+            enablejsapi:1
         },
         events: {
-            'onReady': onPlayerReady
+            onReady: function(e){
+                try {
+                    // Dodaj allow atribut na iframe (pomaže autoplay-u)
+                    const iframe = player.getIframe();
+                    iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+                } catch(err){
+                    console.warn('set allow failed', err);
+                }
+            },
+            onStateChange: function(e){
+                // (opciono) možeš pratiti state
+            }
         }
     });
 }
 
-function onPlayerReady(event) {
-    isPlayerReady = true;
-}
-
+/* UI i drag/resize (tvoj postojeći kod, malo očišćen) */
 const box = document.getElementById("floating-player");
 const dragHandle = document.getElementById("drag-handle");
 const resizeHandle = document.getElementById("resize-handle");
@@ -154,13 +87,13 @@ let isResizing = false;
 let startX, startY, startWidth, startHeight;
 let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
 
-/* DRAG & RESIZE LOGIKA (Ostaje ista) */
+/* DRAG */
 dragHandle.addEventListener("pointerdown", e=>{
     isDragging = true;
     startX = e.clientX - box.offsetLeft;
     startY = e.clientY - box.offsetTop;
+    dragHandle.style.cursor="grabbing";
 });
-
 document.addEventListener("pointermove", e=>{
     if(isDragging){
         box.style.left = (e.clientX - startX) + "px";
@@ -177,13 +110,10 @@ document.addEventListener("pointermove", e=>{
         }
     }
 });
-
-document.addEventListener("pointerup", ()=>{
-    if(isDragging || isResizing) savePosition();
-    isDragging = false;
-    isResizing = false;
+document.addEventListener("pointerup", e=>{
+    if(isDragging){ isDragging=false; dragHandle.style.cursor="grab"; savePosition(); }
+    if(isResizing){ isResizing = false; savePosition(); }
 });
-
 resizeHandle.addEventListener("pointerdown", e=>{
     isResizing = true;
     startX = e.clientX;
@@ -192,25 +122,42 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY DUGME - FIX ZA ZVUK */
+/* PLAY BUTTON: koristimo click/touchend (sinhroni) za validan user gesture */
+/* 1) click handler - najpouzdaniji za desktop i mnoge webviews */
+/* 2) touchend - za neki mobilni browser/WebView koji ne emituje click odmah */
+function doPlayFromGesture(){
+    if(!player) return;
+    try {
+        // direktno u handleru pozivamo play i unMute (sinhrono)
+        player.playVideo();
+        // pokušaj da odmute-ujemo odmah — ako je gesture validna, ovo će uspeti
+        if(typeof player.unMute === 'function') player.unMute();
+        if(typeof player.setVolume === 'function') player.setVolume(100);
+    } catch(err){
+        // ne radimo asinhrono ništa ovde
+        console.warn('play failed', err);
+    }
+}
+
+playBtn.addEventListener('click', function(e){
+    // synchronously call play — ovo je "user gesture"
+    doPlayFromGesture();
+}, false);
+
+// touchend dodat za mobilne WebView-e — koristimo passive:false da bismo bili sigurni
+playBtn.addEventListener('touchend', function(e){
+    doPlayFromGesture();
+    // ne pozivamo preventDefault osim ako stvarno treba
+}, {passive:false});
+
+/* Zadrži swipe logiku ali izbegavaj da u pointerup radiš asinhrone stvari koje bi
+   mogle da "potroše" gesture. Ovde samo proveravamo swipe i show/hide. */
 let startSwipeY;
-playBtn.addEventListener("pointerdown", e=>{
-    startSwipeY = e.clientY;
-});
-
+playBtn.addEventListener("pointerdown", e=>{ startSwipeY = e.clientY; });
 playBtn.addEventListener("pointerup", e=>{
-    if(!isPlayerReady) return;
-
     let diffY = startSwipeY - e.clientY;
-
-    // Prvo pokreni video, pa ga ODMAH odmutiraj
-    // User gesture (klik na playBtn) se prenosi na ove komande
-    player.playVideo();
-    player.unMute();
-    player.setVolume(100);
-
     if(Math.abs(diffY) > 50){
-        if(box.style.transform === "translateY(200vh)" || box.style.transform === ""){
+        if(box.style.transform === "translateY(200vh)"){
             showPlayer();
         } else {
             hidePlayer();
@@ -218,31 +165,34 @@ playBtn.addEventListener("pointerup", e=>{
     }
 });
 
+/* STOP / NEXT */
 stopBtn.addEventListener("click", ()=>{
-    if(isPlayerReady) player.pauseVideo();
+    if(player && typeof player.pauseVideo === 'function') player.pauseVideo();
 });
-
 nextBtn.addEventListener("click", ()=>{
-    if(isPlayerReady){
-        currentIndex = (currentIndex + 1) % playlist.length;
-        // loadVideoById automatski pokreće video, dodajemo unMute za svaki slučaj
+    currentIndex = (currentIndex + 1) % playlist.length;
+    if(player && typeof player.loadVideoById === 'function'){
         player.loadVideoById(playlist[currentIndex]);
-        player.unMute();
+        // pozovi play u istom klik handleru ako želiš da se odmah pusti:
+        // NOTE: loadVideoById može biti asinhrono interno — ako ne pusti odmah, korisnik će morati da klikne opet.
+        try { player.playVideo(); } catch(e){ /* ignore */ }
     }
 });
 
+/* SHOW/HIDE OFFSCREEN */
 function showPlayer(){
-    if(savedPos.left !== null){
+    if(savedPos.left !== null && savedPos.top !== null){
         box.style.left = savedPos.left + "px";
         box.style.top = savedPos.top + "px";
+    } else {
+        box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
+        box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
     }
     box.style.transform = "translateY(0)";
 }
+function hidePlayer(){ box.style.transform = "translateY(200vh)"; }
 
-function hidePlayer(){
-    box.style.transform = "translateY(200vh)";
-}
-
+/* SAVE POSITION */
 function savePosition(){
     savedPos.left = box.offsetLeft;
     savedPos.top = box.offsetTop;
