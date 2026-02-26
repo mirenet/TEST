@@ -3,129 +3,129 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>TEST: muted autoplay + fallback overlay</title>
+<title>Muted autoplay test</title>
+
 <style>
-  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#111;color:#fff;display:flex;justify-content:center;padding:20px}
-  .wrap{width:100%;max-width:900px}
-  .player-wrap{position:relative;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 12px 30px rgba(0,0,0,.6)}
-  .video-iframe{width:100%;height:56.25vw;max-height:506px;border:0;display:block;background:#000}
-  .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;pointer-events:auto}
-  .overlay .card{background:rgba(0,0,0,0.6);padding:18px 20px;border-radius:12px;text-align:center;backdrop-filter: blur(4px)}
-  .big{font-size:18px;margin:8px 0}
-  .muted-hint{font-size:13px;color:#ccc}
-  .controls{display:flex;gap:8px;justify-content:center;margin-top:12px}
-  button{cursor:pointer;border:0;padding:10px 12px;border-radius:8px}
-  .btn-primary{background:#6b8e23;color:#fff;font-weight:700}
-  .btn-alt{background:#333;color:#ddd}
-  .small-actions{position:absolute;right:10px;bottom:10px;z-index:40;display:flex;gap:8px}
-  .small-actions button{background:rgba(255,255,255,0.06);color:#fff;padding:6px 8px;border-radius:8px}
-  .hidden{display:none}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#111;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+  padding:20px;
+}
+.wrap{width:100%;max-width:900px}
+.player-wrap{
+  position:relative;
+  border-radius:12px;
+  overflow:hidden;
+  background:#000;
+  box-shadow:0 12px 30px rgba(0,0,0,.6)
+}
+.video-iframe{
+  width:100%;
+  aspect-ratio:16/9;
+  border:0;
+  display:block;
+}
+.overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+  background:rgba(0,0,0,0.55);
+}
+.card{
+  background:rgba(0,0,0,0.75);
+  padding:20px;
+  border-radius:12px;
+  text-align:center;
+}
+button{
+  cursor:pointer;
+  border:0;
+  padding:10px 14px;
+  border-radius:8px;
+  margin:6px;
+}
+.btn-primary{background:#6b8e23;color:#fff;font-weight:700}
+.btn-alt{background:#333;color:#ddd}
+.hidden{display:none}
 </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <h2>Test muted autoplay + fallback</h2>
-    <p style="color:#ccc">Ako ovo NE pusti video mutiranog pri load-u — klikni “Tap to unmute” koji će pokušati da odmute iz validne geste. Ako ni tada ne radi, Via blokira autoplay.</p>
+<div class="wrap">
 
-    <div class="player-wrap" id="playerWrap">
-      <iframe id="yt" class="video-iframe"
-        src=""
-        allow="autoplay; encrypted-media; picture-in-picture"
-        allowfullscreen
-        referrerpolicy="no-referrer"
-      ></iframe>
+<h2>Muted autoplay test</h2>
+<p style="color:#ccc">
+Ako autoplay ne krene u Via browseru — klikni “Tap to unmute”.
+</p>
 
-      <!-- overlay koji govori korisniku da treba da tapne da odmutira -->
-      <div class="overlay" id="overlay">
-        <div class="card" id="card">
-          <div class="big">Tap to unmute</div>
-          <div class="muted-hint">Video je startovan *utišano* (muted). Dodirni da ukloniš mute i pustiš zvuk.</div>
-          <div class="controls" style="margin-top:10px">
-            <button id="tapBtn" class="btn-primary">Tap to unmute</button>
-            <button id="openBtn" class="btn-alt">Open in YouTube</button>
-          </div>
-        </div>
-      </div>
+<div class="player-wrap">
+  <iframe
+    id="yt"
+    class="video-iframe"
+    allow="autoplay; encrypted-media"
+    allowfullscreen>
+  </iframe>
 
-      <div class="small-actions" id="smallActions">
-        <button id="reloadMuted">Load muted now</button>
-        <button id="hideOverlay">Hide overlay</button>
-      </div>
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <div style="margin-bottom:10px;font-size:18px;">Tap to unmute</div>
+      <button id="tapBtn" class="btn-primary">Tap to unmute</button>
+      <button id="openBtn" class="btn-alt">Open on YouTube</button>
     </div>
   </div>
+</div>
+
+</div>
 
 <script>
 (function(){
-  // staviti tvoj video URL/ID ovde
-  const VIDEO = 'https://www.youtube.com/watch?v=79fzeNUqQbQ'
-  function extractId(url){
-    if(!url) return null;
-    const m = url.match(/[?&]v=([^&]+)/); if(m) return m[1];
-    const m2 = url.match(/youtu\.be\/([^?&]+)/); if(m2) return m2[1];
-    try{ const p=new URL(url).pathname.split('/').filter(Boolean); return p.length? p.pop(): null; }catch(e){return null;}
+
+  // SAMO OVO MENJAŠ AKO MENJAŠ VIDEO
+  const VIDEO_ID = "79fzeNUqQbQ";
+
+  const iframe = document.getElementById("yt");
+  const overlay = document.getElementById("overlay");
+  const tapBtn = document.getElementById("tapBtn");
+  const openBtn = document.getElementById("openBtn");
+
+  // 1️⃣ load muted autoplay (najstabilnija varijanta)
+  function loadMuted(){
+    iframe.src =
+      "https://www.youtube.com/embed/" +
+      VIDEO_ID +
+      "?playsinline=1&autoplay=1&mute=1";
   }
 
-  const id = extractId(VIDEO);
-  if(!id) { console.warn('no id'); }
-
-  const iframe = document.getElementById('yt');
-  const overlay = document.getElementById('overlay');
-  const tapBtn = document.getElementById('tapBtn');
-  const openBtn = document.getElementById('openBtn');
-  const reloadMuted = document.getElementById('reloadMuted');
-  const hideOverlay = document.getElementById('hideOverlay');
-
-  // 1) pokušaj da odmah učitaš muted autoplay (ovo ponekad radi u nekim WebView-ovima)
-  function loadMutedAutoplay(){
-    if(!id) return;
-    const src = 'https://www.youtube-nocookie.com/embed/' + id +
-      '?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&controls=1&enablejsapi=1';
-    iframe.src = src;
-    // overlay ostaje vidljiv dok korisnik ne odmutira ručno
+  // 2️⃣ iz korisničke geste reload bez mute
+  function unmute(){
+    iframe.src =
+      "https://www.youtube.com/embed/" +
+      VIDEO_ID +
+      "?playsinline=1&autoplay=1";
+    overlay.classList.add("hidden");
   }
 
-  // 2) pokušaj iz validne geste da pošaljemo unMute/postMessage ili da opet setujemo src bez mute
-  function unmuteFromGesture(e){
-    if(e && e.preventDefault) e.preventDefault();
-
-    // Pokušavamo prvo postMessage unMute (ako enablejsapi=1 radi)
-    try {
-      // pošalji prema oba possible origin-a
-      const msg = JSON.stringify({ event:'command', func:'unMute', args:[] });
-      iframe.contentWindow && iframe.contentWindow.postMessage(msg, 'https://www.youtube.com');
-      iframe.contentWindow && iframe.contentWindow.postMessage(msg, 'https://www.youtube-nocookie.com');
-    } catch(err){ /* ignore */ }
-
-    // Takođe pokušaj agresivni fallback: ponovo postavi src sa mute=0 (iz iste geste)
-    try {
-      const src2 = 'https://www.youtube-nocookie.com/embed/' + id +
-        '?autoplay=1&mute=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&controls=1';
-      iframe.src = src2;
-    } catch(err) { /* ignore */ }
-
-    // sakrij overlay
-    overlay.classList.add('hidden');
+  function openYT(){
+    window.open(
+      "https://www.youtube.com/watch?v=" + VIDEO_ID,
+      "_blank"
+    );
   }
 
-  // Open in YouTube (fallback)
-  function openInYouTube(){
-    window.open('https://www.youtube.com/watch?v=' + id, '_blank');
-  }
+  tapBtn.addEventListener("click", unmute);
+  openBtn.addEventListener("click", openYT);
 
-  // events
-  tapBtn.addEventListener('click', unmuteFromGesture, {passive:false});
-  tapBtn.addEventListener('touchend', unmuteFromGesture, {passive:false});
-  openBtn.addEventListener('click', openInYouTube);
-  reloadMuted.addEventListener('click', loadMutedAutoplay);
-  hideOverlay.addEventListener('click', ()=>overlay.classList.add('hidden'));
+  loadMuted();
 
-  // initial attempt
-  loadMutedAutoplay();
-
-  // small heuristic: after X ms, if iframe still not playing (we can't reliably detect),
-  // we keep overlay visible and user can tap to unmute.
-  // (No reliable detection for "is playing" cross-origin.)
 })();
 </script>
+
 </body>
 </html>
