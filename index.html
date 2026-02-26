@@ -1,204 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Floating YouTube Player Playlist Offscreen</title>
-
-<style>
-/* (tvoj stil ostaje isti) */
-body{ margin:0; height:200vh; background:#111; font-family:Arial; color:white; }
-#floating-player{ position:fixed; width:160px; height:90px; background:#000; border-radius:14px; box-shadow:0 10px 25px rgba(0,0,0,0.5); overflow:hidden; z-index:9999; touch-action:none; transform: translateY(200vh); transition: transform 0.3s ease; }
-#drag-handle{ position:absolute; top:0; left:0; width:100%; height:24px; background:rgba(0,0,0,0.4); cursor:grab; z-index:10; }
-#resize-handle{ position:absolute; width:18px; height:18px; right:0; bottom:0; background:rgba(255,255,255,0.4); border-top-left-radius:6px; cursor:nwse-resize; z-index:10; }
-#player{ width:100%; height:100%; }
-#controls-bar{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:20px; z-index:10000; }
-.ctrl-btn{ width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:bold; color:black; background:#444; user-select:none; touch-action:none; }
-#play-btn{ background:#6b8e23; }
-#stop-btn{ background:#fff; color:black; }
-#next-btn{ background:#808080; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gesture test</title>
+  <style>body{display:flex;height:100vh;align-items:center;justify-content:center;background:#111;color:#fff;font-family:Arial}button{padding:20px 30px;font-size:20px;border-radius:8px}</style>
 </head>
-
 <body>
+  <button id="test">Tap to test audio play()</button>
 
-<div id="floating-player">
-    <div id="drag-handle"></div>
-    <div id="player"></div>
-    <div id="resize-handle"></div>
-</div>
+  <script>
+    // mali base64 zvuk (kratak klik) — ne zavisi od mreže
+    const base64 = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+    const a = new Audio(base64);
+    a.preload = 'auto';
 
-<div id="controls-bar">
-    <div class="ctrl-btn" id="stop-btn">■</div>
-    <div class="ctrl-btn" id="play-btn">▶</div>
-    <div class="ctrl-btn" id="next-btn">⏭</div>
-</div>
-
-<script src="https://www.youtube.com/iframe_api"></script>
-
-<script>
-let player;
-
-/* Playlist */
-const playlist = [
-  "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
-  "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
-  "09R8_2nJtjg","YqeW9_5kURI","fLexgOxsZu0","K0ibBPhiaG0","d9MyW72ELq0"
-];
-let currentIndex = 0;
-
-function onYouTubeIframeAPIReady(){
-    player = new YT.Player('player', {
-        videoId: playlist[currentIndex],
-        playerVars:{
-            autoplay:0,       // ne auto-play bez geste
-            controls:1,
-            playsinline:1,
-            rel:0,
-            enablejsapi:1
-        },
-        events: {
-            onReady: function(e){
-                try {
-                    // Dodaj allow atribut na iframe (pomaže autoplay-u)
-                    const iframe = player.getIframe();
-                    iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
-                } catch(err){
-                    console.warn('set allow failed', err);
-                }
-            },
-            onStateChange: function(e){
-                // (opciono) možeš pratiti state
-            }
-        }
+    document.getElementById('test').addEventListener('click', function(){
+      // pokušaj da sinhrono pokreneš play() u click handleru
+      a.play().then(()=> {
+        alert('Audio play() uspesno (cuo si zvuk). Sign: TOP-LEVEL gestures dozvoljeni.');
+      }).catch(err=>{
+        alert('Audio play() je odbijen (blokiran). Sign: WebView NE dozvoljava top-level play().\\n' + (err && err.message ? err.message : 'no message'));
+      });
     });
-}
-
-/* UI i drag/resize (tvoj postojeći kod, malo očišćen) */
-const box = document.getElementById("floating-player");
-const dragHandle = document.getElementById("drag-handle");
-const resizeHandle = document.getElementById("resize-handle");
-const playBtn = document.getElementById("play-btn");
-const stopBtn = document.getElementById("stop-btn");
-const nextBtn = document.getElementById("next-btn");
-
-let isDragging = false;
-let isResizing = false;
-let startX, startY, startWidth, startHeight;
-let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
-
-/* DRAG */
-dragHandle.addEventListener("pointerdown", e=>{
-    isDragging = true;
-    startX = e.clientX - box.offsetLeft;
-    startY = e.clientY - box.offsetTop;
-    dragHandle.style.cursor="grabbing";
-});
-document.addEventListener("pointermove", e=>{
-    if(isDragging){
-        box.style.left = (e.clientX - startX) + "px";
-        box.style.top = (e.clientY - startY) + "px";
-        box.style.right = "auto";
-        box.style.bottom = "auto";
-    }
-    if(isResizing){
-        let newWidth = startWidth + (e.clientX - startX);
-        let newHeight = startHeight + (e.clientY - startY);
-        if(newWidth > 120 && newHeight > 70){
-            box.style.width = newWidth + "px";
-            box.style.height = newHeight + "px";
-        }
-    }
-});
-document.addEventListener("pointerup", e=>{
-    if(isDragging){ isDragging=false; dragHandle.style.cursor="grab"; savePosition(); }
-    if(isResizing){ isResizing = false; savePosition(); }
-});
-resizeHandle.addEventListener("pointerdown", e=>{
-    isResizing = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    startWidth = box.offsetWidth;
-    startHeight = box.offsetHeight;
-});
-
-/* PLAY BUTTON: koristimo click/touchend (sinhroni) za validan user gesture */
-/* 1) click handler - najpouzdaniji za desktop i mnoge webviews */
-/* 2) touchend - za neki mobilni browser/WebView koji ne emituje click odmah */
-function doPlayFromGesture(){
-    if(!player) return;
-    try {
-        // direktno u handleru pozivamo play i unMute (sinhrono)
-        player.playVideo();
-        // pokušaj da odmute-ujemo odmah — ako je gesture validna, ovo će uspeti
-        if(typeof player.unMute === 'function') player.unMute();
-        if(typeof player.setVolume === 'function') player.setVolume(100);
-    } catch(err){
-        // ne radimo asinhrono ništa ovde
-        console.warn('play failed', err);
-    }
-}
-
-playBtn.addEventListener('click', function(e){
-    // synchronously call play — ovo je "user gesture"
-    doPlayFromGesture();
-}, false);
-
-// touchend dodat za mobilne WebView-e — koristimo passive:false da bismo bili sigurni
-playBtn.addEventListener('touchend', function(e){
-    doPlayFromGesture();
-    // ne pozivamo preventDefault osim ako stvarno treba
-}, {passive:false});
-
-/* Zadrži swipe logiku ali izbegavaj da u pointerup radiš asinhrone stvari koje bi
-   mogle da "potroše" gesture. Ovde samo proveravamo swipe i show/hide. */
-let startSwipeY;
-playBtn.addEventListener("pointerdown", e=>{ startSwipeY = e.clientY; });
-playBtn.addEventListener("pointerup", e=>{
-    let diffY = startSwipeY - e.clientY;
-    if(Math.abs(diffY) > 50){
-        if(box.style.transform === "translateY(200vh)"){
-            showPlayer();
-        } else {
-            hidePlayer();
-        }
-    }
-});
-
-/* STOP / NEXT */
-stopBtn.addEventListener("click", ()=>{
-    if(player && typeof player.pauseVideo === 'function') player.pauseVideo();
-});
-nextBtn.addEventListener("click", ()=>{
-    currentIndex = (currentIndex + 1) % playlist.length;
-    if(player && typeof player.loadVideoById === 'function'){
-        player.loadVideoById(playlist[currentIndex]);
-        // pozovi play u istom klik handleru ako želiš da se odmah pusti:
-        // NOTE: loadVideoById može biti asinhrono interno — ako ne pusti odmah, korisnik će morati da klikne opet.
-        try { player.playVideo(); } catch(e){ /* ignore */ }
-    }
-});
-
-/* SHOW/HIDE OFFSCREEN */
-function showPlayer(){
-    if(savedPos.left !== null && savedPos.top !== null){
-        box.style.left = savedPos.left + "px";
-        box.style.top = savedPos.top + "px";
-    } else {
-        box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
-        box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
-    }
-    box.style.transform = "translateY(0)";
-}
-function hidePlayer(){ box.style.transform = "translateY(200vh)"; }
-
-/* SAVE POSITION */
-function savePosition(){
-    savedPos.left = box.offsetLeft;
-    savedPos.top = box.offsetTop;
-    localStorage.setItem("playerPos", JSON.stringify(savedPos));
-}
-</script>
-
+  </script>
 </body>
 </html>
