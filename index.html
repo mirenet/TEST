@@ -1,28 +1,382 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Gesture test</title>
-  <style>body{display:flex;height:100vh;align-items:center;justify-content:center;background:#111;color:#fff;font-family:Arial}button{padding:20px 30px;font-size:20px;border-radius:8px}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floating YouTube Player Playlist Offscreen</title>
+
+<style>
+body{
+    margin:0;
+    height:200vh;
+    background:#111;
+    font-family:Arial;
+    color:white;
+}
+
+/* Floating box */
+#floating-player{
+    position:fixed;
+    width:160px;
+    height:90px;
+    background:#000;
+    border-radius:14px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.5);
+    overflow:hidden;
+    z-index:9999;
+    touch-action:none;
+    transform: translateY(200vh); /* sakriven offscreen */
+    transition: transform 0.3s ease;
+}
+
+/* Drag area */
+#drag-handle{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:24px;
+    background:rgba(0,0,0,0.4);
+    cursor:grab;
+    z-index:10;
+}
+
+/* Resize handle */
+#resize-handle{
+    position:absolute;
+    width:18px;
+    height:18px;
+    right:0;
+    bottom:0;
+    background:rgba(255,255,255,0.4);
+    border-top-left-radius:6px;
+    cursor:nwse-resize;
+    z-index:10;
+}
+
+#player{
+    width:100%;
+    height:100%;
+    position:relative; /* važno za overlay positioning */
+}
+
+/* Controls bar */
+#controls-bar{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    align-items:center;
+    gap:20px;
+    z-index:10000;
+}
+
+/* Buttons */
+.ctrl-btn{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:28px;
+    font-weight:bold;
+    color:black;
+    background:#444;
+    user-select:none;
+    touch-action:none;
+}
+
+#play-btn{
+    background:#6b8e23;
+}
+#stop-btn{
+    background:#fff;
+    color:black;
+}
+#next-btn{
+    background:#808080;
+}
+</style>
 </head>
+
 <body>
-  <button id="test">Tap to test audio play()</button>
 
-  <script>
-    // mali base64 zvuk (kratak klik) — ne zavisi od mreže
-    const base64 = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
-    const a = new Audio(base64);
-    a.preload = 'auto';
+<div id="floating-player">
+    <div id="drag-handle"></div>
+    <div id="player"></div>
+    <div id="resize-handle"></div>
+</div>
 
-    document.getElementById('test').addEventListener('click', function(){
-      // pokušaj da sinhrono pokreneš play() u click handleru
-      a.play().then(()=> {
-        alert('Audio play() uspesno (cuo si zvuk). Sign: TOP-LEVEL gestures dozvoljeni.');
-      }).catch(err=>{
-        alert('Audio play() je odbijen (blokiran). Sign: WebView NE dozvoljava top-level play().\\n' + (err && err.message ? err.message : 'no message'));
-      });
+<div id="controls-bar">
+    <div class="ctrl-btn" id="stop-btn">■</div>
+    <div class="ctrl-btn" id="play-btn">▶</div>
+    <div class="ctrl-btn" id="next-btn">⏭</div>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+let player;
+
+/* Playlist 15 muzičkih videa */
+const playlist = [
+  "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
+  "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
+  "09R8_2nJtjg","YqeW9_5kURI","fLexgOxsZu0","K0ibBPhiaG0","d9MyW72ELq0"
+];
+let currentIndex = 0;
+
+function onYouTubeIframeAPIReady(){
+    player = new YT.Player('player', {
+        videoId: playlist[currentIndex],
+        playerVars:{
+            autoplay:0,
+            controls:1,
+            playsinline:1,
+            rel:0,
+            enablejsapi:1
+        },
+        events: {
+            onReady: function(e){
+                try{
+                    const iframe = player.getIframe();
+                    iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+                }catch(err){
+                    // ignore
+                }
+                // position catcher after iframe exists
+                setTimeout(positionCatcher, 50);
+            },
+            onStateChange: function(e){
+                // opcionalno praćenje stanja
+            }
+        }
     });
-  </script>
+}
+
+/* UI i drag/resize */
+const box = document.getElementById("floating-player");
+const dragHandle = document.getElementById("drag-handle");
+const resizeHandle = document.getElementById("resize-handle");
+const playBtn = document.getElementById("play-btn");
+const stopBtn = document.getElementById("stop-btn");
+const nextBtn = document.getElementById("next-btn");
+
+let isDragging = false;
+let isResizing = false;
+let startX, startY, startWidth, startHeight;
+
+/* Load saved position */
+let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
+
+/* DRAG */
+dragHandle.addEventListener("pointerdown", e=>{
+    isDragging = true;
+    startX = e.clientX - box.offsetLeft;
+    startY = e.clientY - box.offsetTop;
+    dragHandle.style.cursor="grabbing";
+});
+
+document.addEventListener("pointermove", e=>{
+    if(isDragging){
+        box.style.left = (e.clientX - startX) + "px";
+        box.style.top = (e.clientY - startY) + "px";
+        box.style.right = "auto";
+        box.style.bottom = "auto";
+        // update catcher position when box moves
+        positionCatcher();
+    }
+
+    if(isResizing){
+        let newWidth = startWidth + (e.clientX - startX);
+        let newHeight = startHeight + (e.clientY - startY);
+
+        if(newWidth > 120 && newHeight > 70){
+            box.style.width = newWidth + "px";
+            box.style.height = newHeight + "px";
+            positionCatcher();
+        }
+    }
+});
+
+document.addEventListener("pointerup", e=>{
+    if(isDragging){
+        isDragging=false;
+        dragHandle.style.cursor="grab";
+        savePosition();
+    }
+    if(isResizing){
+        isResizing = false;
+        savePosition();
+    }
+});
+
+/* RESIZE */
+resizeHandle.addEventListener("pointerdown", e=>{
+    isResizing = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startWidth = box.offsetWidth;
+    startHeight = box.offsetHeight;
+});
+
+/* PLAY BUTTON: click handler koji pokušava play (ali prvi validan gesture hvata catcher) */
+function doPlayFromGesture(){
+    if(!player) return;
+    try {
+        player.playVideo();
+        if(typeof player.unMute === 'function') player.unMute();
+        if(typeof player.setVolume === 'function') player.setVolume(100);
+    } catch(err){
+        // ignore
+    }
+}
+
+playBtn.addEventListener('click', function(e){
+    // pokušaj direktno iz play dugmeta — ali ako WebView ne da gesture, catcher će pomoći
+    doPlayFromGesture();
+}, false);
+
+// touch fallback
+playBtn.addEventListener('touchend', function(e){
+    doPlayFromGesture();
+}, {passive:false});
+
+/* STOP / NEXT BUTTONS */
+stopBtn.addEventListener("click", ()=>{
+    if(player && typeof player.pauseVideo === 'function') player.pauseVideo();
+});
+
+nextBtn.addEventListener("click", ()=>{
+    currentIndex = (currentIndex + 1) % playlist.length;
+    if(player && typeof player.loadVideoById === 'function'){
+        player.loadVideoById(playlist[currentIndex]);
+        try { player.playVideo(); } catch(e) { /* ignore */ }
+    }
+});
+
+/* SHOW/HIDE OFFSCREEN */
+function showPlayer(){
+    if(savedPos.left !== null && savedPos.top !== null){
+        box.style.left = savedPos.left + "px";
+        box.style.top = savedPos.top + "px";
+    } else {
+        box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
+        box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
+    }
+    box.style.transform = "translateY(0)";
+    // update catcher kad se pojavi
+    setTimeout(positionCatcher, 50);
+}
+
+function hidePlayer(){
+    box.style.transform = "translateY(200vh)";
+    // update catcher kad se sakrije
+    setTimeout(positionCatcher, 50);
+}
+
+/* SAVE POSITION */
+function savePosition(){
+    savedPos.left = box.offsetLeft;
+    savedPos.top = box.offsetTop;
+    localStorage.setItem("playerPos", JSON.stringify(savedPos));
+}
+
+/* ---------------------------
+   TOUCH-CATCHER (FIRST-TOUCH)
+   ---------------------------
+   Catcher hvata PRVI tap (nad video/dugmetom) i sinhrono poziva play().
+   Nakon prvog uspeha se uklanja.
+*/
+
+const playerEl = document.getElementById('player');
+const controlsBar = document.getElementById('controls-bar');
+
+/* wrapper preko celog viewporta; z-index veći od controls (10000) da preuzme klik */
+const catcherWrapper = document.createElement('div');
+catcherWrapper.style.position = 'fixed';
+catcherWrapper.style.left = '0';
+catcherWrapper.style.top = '0';
+catcherWrapper.style.width = '100%';
+catcherWrapper.style.height = '100%';
+catcherWrapper.style.pointerEvents = 'none';
+catcherWrapper.style.zIndex = 10001; // iznad controls-bar (10000)
+
+/* stvarni catcher koji će biti pomeren iznad play dugmeta i/ili player-a */
+const catcher = document.createElement('div');
+catcher.style.position = 'absolute';
+catcher.style.pointerEvents = 'auto';
+catcher.style.background = 'transparent';
+catcher.style.zIndex = 10002; // iznad wrapper
+catcher.style.borderRadius = '8px'; // bez efekta, samo da bude lepše ako se pokaže
+
+catcherWrapper.appendChild(catcher);
+document.body.appendChild(catcherWrapper);
+
+function positionCatcher(){
+    // Ako nije u DOM-u, ništa ne radi
+    if(!catcher || !controlsBar) return;
+
+    const playRect = controlsBar.getBoundingClientRect();
+    const playerRect = playerEl.getBoundingClientRect();
+
+    // Ako je player sakriven daleko (translateY), playerRect može biti offscreen -> koristimo playRect
+    // Izračunamo bounding box koji pokriva oba elementa
+    const left = Math.min(playRect.left, playerRect.left);
+    const right = Math.max(playRect.right, playerRect.right);
+    const top = Math.min(playRect.top, playerRect.top);
+    const bottom = Math.max(playRect.bottom, playerRect.bottom);
+
+    // Ako su vrednosti NaN ili 0, fallback na playRect
+    if (!isFinite(left) || !isFinite(top) || !isFinite(right) || !isFinite(bottom)) {
+        catcher.style.left = playRect.left + 'px';
+        catcher.style.top = playRect.top + 'px';
+        catcher.style.width = playRect.width + 'px';
+        catcher.style.height = playRect.height + 'px';
+        return;
+    }
+
+    // Pozicioniramo catcher unutar wrapper (koji je fixed 0,0)
+    catcher.style.left = left + 'px';
+    catcher.style.top = top + 'px';
+    catcher.style.width = (right - left) + 'px';
+    catcher.style.height = (bottom - top) + 'px';
+}
+
+// pozicioniramo odmah i pri promeni veličine/scroll
+positionCatcher();
+window.addEventListener('resize', positionCatcher);
+window.addEventListener('scroll', positionCatcher);
+
+/* handler koji hvata prvi tap */
+function catcherHandler(e){
+    // Pozovi play SINHRONO u ovom handleru
+    try {
+        doPlayFromGesture();
+    } catch(err){ /* ignore */ }
+
+    // ukloni catcher i wrapper tako da dalje ne blokira interakcije
+    try {
+        catcher.removeEventListener('click', catcherHandler, {passive:false});
+        catcher.removeEventListener('touchend', catcherHandler, {passive:false});
+    } catch(e){}
+    if(catcher.parentNode) catcher.parentNode.removeChild(catcher);
+    if(catcherWrapper.parentNode) catcherWrapper.parentNode.removeChild(catcherWrapper);
+
+    // spreči bubble ako treba
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+// vežemo oba event-a (click i touchend)
+catcher.addEventListener('click', catcherHandler, {passive:false});
+catcher.addEventListener('touchend', catcherHandler, {passive:false});
+
+/* -- kraj catcher koda -- */
+
+</script>
+
 </body>
 </html>
