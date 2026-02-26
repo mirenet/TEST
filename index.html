@@ -14,7 +14,6 @@ body{
     color:white;
 }
 
-/* Floating box */
 #floating-player{
     position:fixed;
     width:160px;
@@ -29,7 +28,6 @@ body{
     transition: transform 0.3s ease;
 }
 
-/* Drag area */
 #drag-handle{
     position:absolute;
     top:0;
@@ -41,7 +39,6 @@ body{
     z-index:10;
 }
 
-/* Resize handle */
 #resize-handle{
     position:absolute;
     width:18px;
@@ -59,7 +56,6 @@ body{
     height:100%;
 }
 
-/* Controls bar */
 #controls-bar{
     position:fixed;
     bottom:20px;
@@ -71,7 +67,6 @@ body{
     z-index:10000;
 }
 
-/* Buttons */
 .ctrl-btn{
     width:70px;
     height:70px;
@@ -113,7 +108,6 @@ body{
 let player;
 let playerReady = false;
 
-/* Playlist */
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
@@ -138,7 +132,6 @@ function onYouTubeIframeAPIReady(){
     });
 }
 
-/* Elements */
 const box = document.getElementById("floating-player");
 const dragHandle = document.getElementById("drag-handle");
 const resizeHandle = document.getElementById("resize-handle");
@@ -150,10 +143,8 @@ let isDragging = false;
 let isResizing = false;
 let startX, startY, startWidth, startHeight;
 
-/* Load saved position */
 let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
 
-/* DRAGGING */
 dragHandle.addEventListener("pointerdown", e=>{
     isDragging = true;
     startX = e.clientX - box.offsetLeft;
@@ -191,7 +182,6 @@ document.addEventListener("pointerup", ()=>{
     }
 });
 
-/* RESIZE */
 resizeHandle.addEventListener("pointerdown", e=>{
     isResizing = true;
     startX = e.clientX;
@@ -200,23 +190,41 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON FIX (WebView compatible) */
-let startSwipeY = 0;
+/* PLAY BUTTON + SILENT UNLOCK */
+let startSwipeY;
 
 playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
 });
 
-/* PLAY mora biti na CLICK */
-playBtn.addEventListener("click", ()=>{
-    if(!playerReady) return;
-    player.playVideo();
-});
-
-/* Swipe show/hide */
 playBtn.addEventListener("pointerup", e=>{
+    if(!playerReady) return;
+
     let diffY = startSwipeY - e.clientY;
 
+    // TAP → silent unlock play
+    if(Math.abs(diffY) < 50){
+
+        let state = player.getPlayerState();
+
+        if(state !== 1){
+
+            let wasMuted = player.isMuted();
+            let currentVolume = player.getVolume();
+
+            player.mute();
+            player.playVideo();
+
+            setTimeout(()=>{
+                if(!wasMuted){
+                    player.unMute();
+                    player.setVolume(currentVolume);
+                }
+            }, 250);
+        }
+    }
+
+    // SWIPE → show/hide
     if(Math.abs(diffY) > 50){
         if(box.style.transform === "translateY(200vh)"){
             showPlayer();
@@ -226,7 +234,6 @@ playBtn.addEventListener("pointerup", e=>{
     }
 });
 
-/* STOP / NEXT */
 stopBtn.addEventListener("click", ()=>{
     if(playerReady) player.pauseVideo();
 });
@@ -238,7 +245,6 @@ nextBtn.addEventListener("click", ()=>{
     player.playVideo();
 });
 
-/* SHOW/HIDE */
 function showPlayer(){
     if(savedPos.left !== null && savedPos.top !== null){
         box.style.left = savedPos.left + "px";
@@ -254,7 +260,6 @@ function hidePlayer(){
     box.style.transform = "translateY(200vh)";
 }
 
-/* SAVE POSITION */
 function savePosition(){
     savedPos.left = box.offsetLeft;
     savedPos.top = box.offsetTop;
