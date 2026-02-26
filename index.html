@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Floating YouTube Player Playlist Offscreen</title>
+<title>Floating YouTube Player - Fix</title>
 
 <style>
 body{
@@ -27,6 +27,8 @@ body{
     touch-action:none;
     transform: translateY(200vh); /* sakriven offscreen */
     transition: transform 0.3s ease;
+    left: 20px;
+    top: 20px;
 }
 
 /* Drag area */
@@ -57,6 +59,7 @@ body{
 #player{
     width:100%;
     height:100%;
+    pointer-events: auto; /* Dozvoli klik na sam video ako zatreba */
 }
 
 /* Controls bar */
@@ -87,16 +90,9 @@ body{
     touch-action:none;
 }
 
-#play-btn{
-    background:#6b8e23;
-}
-#stop-btn{
-    background:#fff;
-    color:black;
-}
-#next-btn{
-    background:#808080;
-}
+#play-btn{ background:#6b8e23; }
+#stop-btn{ background:#fff; color:black; }
+#next-btn{ background:#808080; }
 </style>
 </head>
 
@@ -114,32 +110,38 @@ body{
     <div class="ctrl-btn" id="next-btn">⏭</div>
 </div>
 
-<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://www.youtube.com"></script>
 
 <script>
 let player;
-
-/* Playlist 15 muzičkih videa */
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
   "09R8_2nJtjg","YqeW9_5kURI","fLexgOxsZu0","K0ibBPhiaG0","d9MyW72ELq0"
 ];
 let currentIndex = 0;
+let isPlayerReady = false;
 
 function onYouTubeIframeAPIReady(){
     player = new YT.Player('player', {
         videoId: playlist[currentIndex],
         playerVars:{
-            autoplay:0,
-            controls:1,
-            playsinline:1,
-            rel:0
+            autoplay: 0,
+            controls: 1,
+            playsinline: 1,
+            rel: 0,
+            mute: 1 // OBAVEZNO: Omogućava start bez blokade
+        },
+        events: {
+            'onReady': onPlayerReady
         }
     });
 }
 
-/* Floating player */
+function onPlayerReady(event) {
+    isPlayerReady = true;
+}
+
 const box = document.getElementById("floating-player");
 const dragHandle = document.getElementById("drag-handle");
 const resizeHandle = document.getElementById("resize-handle");
@@ -150,16 +152,13 @@ const nextBtn = document.getElementById("next-btn");
 let isDragging = false;
 let isResizing = false;
 let startX, startY, startWidth, startHeight;
-
-/* Load saved position */
 let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
 
-/* DRAGGING */
+/* DRAG & RESIZE LOGIKA (Ostaje ista) */
 dragHandle.addEventListener("pointerdown", e=>{
     isDragging = true;
     startX = e.clientX - box.offsetLeft;
     startY = e.clientY - box.offsetTop;
-    dragHandle.style.cursor="grabbing";
 });
 
 document.addEventListener("pointermove", e=>{
@@ -169,11 +168,9 @@ document.addEventListener("pointermove", e=>{
         box.style.right = "auto";
         box.style.bottom = "auto";
     }
-
     if(isResizing){
         let newWidth = startWidth + (e.clientX - startX);
         let newHeight = startHeight + (e.clientY - startY);
-
         if(newWidth > 120 && newHeight > 70){
             box.style.width = newWidth + "px";
             box.style.height = newHeight + "px";
@@ -181,19 +178,12 @@ document.addEventListener("pointermove", e=>{
     }
 });
 
-document.addEventListener("pointerup", e=>{
-    if(isDragging){
-        isDragging=false;
-        dragHandle.style.cursor="grab";
-        savePosition();
-    }
-    if(isResizing){
-        isResizing = false;
-        savePosition();
-    }
+document.addEventListener("pointerup", ()=>{
+    if(isDragging || isResizing) savePosition();
+    isDragging = false;
+    isResizing = false;
 });
 
-/* RESIZE */
 resizeHandle.addEventListener("pointerdown", e=>{
     isResizing = true;
     startX = e.clientX;
@@ -202,24 +192,25 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON: tap = play, swipe = show/hide player */
+/* PLAY DUGME - FIX ZA ZVUK */
 let startSwipeY;
 playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
 });
 
 playBtn.addEventListener("pointerup", e=>{
+    if(!isPlayerReady) return;
+
     let diffY = startSwipeY - e.clientY;
 
-    // Tap → play video bez obzira na vidljivost
-    let state = player.getPlayerState();
-    if(state !== 1){
-        player.playVideo();
-    }
+    // Prvo pokreni video, pa ga ODMAH odmutiraj
+    // User gesture (klik na playBtn) se prenosi na ove komande
+    player.playVideo();
+    player.unMute();
+    player.setVolume(100);
 
-    // Swipe → show/hide floating player
     if(Math.abs(diffY) > 50){
-        if(box.style.transform === "translateY(200vh)"){
+        if(box.style.transform === "translateY(200vh)" || box.style.transform === ""){
             showPlayer();
         } else {
             hidePlayer();
@@ -227,25 +218,23 @@ playBtn.addEventListener("pointerup", e=>{
     }
 });
 
-/* STOP / NEXT BUTTONS */
 stopBtn.addEventListener("click", ()=>{
-    player.pauseVideo();
+    if(isPlayerReady) player.pauseVideo();
 });
 
 nextBtn.addEventListener("click", ()=>{
-    currentIndex = (currentIndex + 1) % playlist.length;
-    player.loadVideoById(playlist[currentIndex]);
-    player.playVideo();
+    if(isPlayerReady){
+        currentIndex = (currentIndex + 1) % playlist.length;
+        // loadVideoById automatski pokreće video, dodajemo unMute za svaki slučaj
+        player.loadVideoById(playlist[currentIndex]);
+        player.unMute();
+    }
 });
 
-/* SHOW/HIDE OFFSCREEN */
 function showPlayer(){
-    if(savedPos.left !== null && savedPos.top !== null){
+    if(savedPos.left !== null){
         box.style.left = savedPos.left + "px";
         box.style.top = savedPos.top + "px";
-    } else {
-        box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
-        box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
     }
     box.style.transform = "translateY(0)";
 }
@@ -254,7 +243,6 @@ function hidePlayer(){
     box.style.transform = "translateY(200vh)";
 }
 
-/* SAVE POSITION */
 function savePosition(){
     savedPos.left = box.offsetLeft;
     savedPos.top = box.offsetTop;
