@@ -198,38 +198,17 @@ playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
 });
 
-playBtn.addEventListener("pointerup", e=>{
-    if(!playerReady) return;
+playBtn.addEventListener("click", function(){
 
-    let diffY = startSwipeY - e.clientY;
+    if(!player) return;
 
-    // TAP
-    if(Math.abs(diffY) < 50){
+    // Nema mute
+    // Nema pause
+    // Nema delay
+    // Direktan play
 
-        if(player.getPlayerState() !== 1){
-
-            let wasMuted = player.isMuted();
-            let originalVolume = player.getVolume();
-
-            player.mute();
-            player.playVideo();
-
-            let checkInterval = setInterval(()=>{
-                if(player.getPlayerState() === 1){
-                    clearInterval(checkInterval);
-
-                    if(!wasMuted){
-                        player.unMute();
-                        player.setVolume(originalVolume);
-                    }
-                }
-            }, 100);
-
-            setTimeout(()=>{
-                clearInterval(checkInterval);
-            }, 3000);
-        }
-    }
+    player.playVideo();
+});
 
     // SWIPE
     if(Math.abs(diffY) > 50){
