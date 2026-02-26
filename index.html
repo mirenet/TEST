@@ -10,10 +10,11 @@ body{
     margin:0;
     height:200vh;
     background:#111;
-    font-family:Arial;
+    font-family:Arial, sans-serif;
     color:white;
 }
 
+/* Floating box */
 #floating-player{
     position:fixed;
     width:160px;
@@ -24,10 +25,13 @@ body{
     overflow:hidden;
     z-index:9999;
     touch-action:none;
-    transform: translateY(200vh);
-    transition: transform 0.3s ease;
+    /* sakrivanje preko opacity umesto translateY */
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.3s ease;
 }
 
+/* Drag area */
 #drag-handle{
     position:absolute;
     top:0;
@@ -39,6 +43,7 @@ body{
     z-index:10;
 }
 
+/* Resize handle */
 #resize-handle{
     position:absolute;
     width:18px;
@@ -56,6 +61,7 @@ body{
     height:100%;
 }
 
+/* Controls bar */
 #controls-bar{
     position:fixed;
     bottom:20px;
@@ -67,6 +73,7 @@ body{
     z-index:10000;
 }
 
+/* Buttons */
 .ctrl-btn{
     width:70px;
     height:70px;
@@ -82,9 +89,16 @@ body{
     touch-action:none;
 }
 
-#play-btn{ background:#6b8e23; }
-#stop-btn{ background:#fff; color:black; }
-#next-btn{ background:#808080; }
+#play-btn{
+    background:#6b8e23;
+}
+#stop-btn{
+    background:#fff;
+    color:black;
+}
+#next-btn{
+    background:#808080;
+}
 </style>
 </head>
 
@@ -106,8 +120,8 @@ body{
 
 <script>
 let player;
-let playerReady = false;
 
+/* Playlist 15 muzičkih videa */
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
@@ -123,15 +137,11 @@ function onYouTubeIframeAPIReady(){
             controls:1,
             playsinline:1,
             rel:0
-        },
-        events:{
-            onReady: function(){
-                playerReady = true;
-            }
         }
     });
 }
 
+/* Floating player */
 const box = document.getElementById("floating-player");
 const dragHandle = document.getElementById("drag-handle");
 const resizeHandle = document.getElementById("resize-handle");
@@ -142,11 +152,11 @@ const nextBtn = document.getElementById("next-btn");
 let isDragging = false;
 let isResizing = false;
 let startX, startY, startWidth, startHeight;
-let startSwipeY;
 
+/* Load saved position */
 let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
 
-/* DRAG */
+/* DRAGGING */
 dragHandle.addEventListener("pointerdown", e=>{
     isDragging = true;
     startX = e.clientX - box.offsetLeft;
@@ -165,6 +175,7 @@ document.addEventListener("pointermove", e=>{
     if(isResizing){
         let newWidth = startWidth + (e.clientX - startX);
         let newHeight = startHeight + (e.clientY - startY);
+
         if(newWidth > 120 && newHeight > 70){
             box.style.width = newWidth + "px";
             box.style.height = newHeight + "px";
@@ -172,7 +183,7 @@ document.addEventListener("pointermove", e=>{
     }
 });
 
-document.addEventListener("pointerup", ()=>{
+document.addEventListener("pointerup", e=>{
     if(isDragging){
         isDragging=false;
         dragHandle.style.cursor="grab";
@@ -193,46 +204,30 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON – STABILNI UNLOCK */
-playBtn.addEventListener("pointerdown", e=>{
-    startSwipeY = e.clientY;
-});
-
+/* PLAY BUTTON: direktan click za valid user gesture */
 playBtn.addEventListener("click", function(){
-
     if(!player) return;
 
-    // Nema mute
-    // Nema pause
-    // Nema delay
-    // Direktan play
+    // Prikaži player ako je skriven
+    box.style.opacity = 1;
+    box.style.pointerEvents = "auto";
 
+    // Direktno playVideo() u istom call stack-u
     player.playVideo();
 });
 
-    // SWIPE
-    if(Math.abs(diffY) > 50){
-        if(box.style.transform === "translateY(200vh)"){
-            showPlayer();
-        } else {
-            hidePlayer();
-        }
-    }
-});
-
-/* STOP / NEXT */
+/* STOP / NEXT BUTTONS */
 stopBtn.addEventListener("click", ()=>{
-    if(playerReady) player.pauseVideo();
+    player.pauseVideo();
 });
 
 nextBtn.addEventListener("click", ()=>{
-    if(!playerReady) return;
     currentIndex = (currentIndex + 1) % playlist.length;
     player.loadVideoById(playlist[currentIndex]);
     player.playVideo();
 });
 
-/* SHOW/HIDE */
+/* SHOW/HIDE OFFSCREEN */
 function showPlayer(){
     if(savedPos.left !== null && savedPos.top !== null){
         box.style.left = savedPos.left + "px";
@@ -241,13 +236,16 @@ function showPlayer(){
         box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
         box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
     }
-    box.style.transform = "translateY(0)";
+    box.style.opacity = 1;
+    box.style.pointerEvents = "auto";
 }
 
 function hidePlayer(){
-    box.style.transform = "translateY(200vh)";
+    box.style.opacity = 0;
+    box.style.pointerEvents = "none";
 }
 
+/* SAVE POSITION */
 function savePosition(){
     savedPos.left = box.offsetLeft;
     savedPos.top = box.offsetTop;
