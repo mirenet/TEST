@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Floating YouTube Player Playlist Offscreen</title>
+<title>Floating YouTube Player</title>
 
 <style>
 body{
@@ -11,7 +11,6 @@ body{
     height:200vh;
     background:#111;
     font-family:Arial;
-    color:white;
 }
 
 #floating-player{
@@ -20,40 +19,16 @@ body{
     height:90px;
     background:#000;
     border-radius:14px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.5);
     overflow:hidden;
     z-index:9999;
-    touch-action:none;
     transform: translateY(200vh);
     transition: transform 0.3s ease;
 }
 
-#drag-handle{
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:24px;
-    background:rgba(0,0,0,0.4);
-    cursor:grab;
-    z-index:10;
-}
-
-#resize-handle{
-    position:absolute;
-    width:18px;
-    height:18px;
-    right:0;
-    bottom:0;
-    background:rgba(255,255,255,0.4);
-    border-top-left-radius:6px;
-    cursor:nwse-resize;
-    z-index:10;
-}
-
-#player{
+#playerFrame{
     width:100%;
     height:100%;
+    border:0;
 }
 
 #controls-bar{
@@ -62,9 +37,7 @@ body{
     left:50%;
     transform:translateX(-50%);
     display:flex;
-    align-items:center;
     gap:20px;
-    z-index:10000;
 }
 
 .ctrl-btn{
@@ -75,25 +48,15 @@ body{
     align-items:center;
     justify-content:center;
     font-size:28px;
-    font-weight:bold;
-    color:black;
     background:#444;
-    user-select:none;
-    touch-action:none;
+    color:white;
 }
-
-#play-btn{ background:#6b8e23; }
-#stop-btn{ background:#fff; color:black; }
-#next-btn{ background:#808080; }
 </style>
 </head>
-
 <body>
 
 <div id="floating-player">
-    <div id="drag-handle"></div>
-    <div id="player"></div>
-    <div id="resize-handle"></div>
+    <iframe id="playerFrame" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 </div>
 
 <div id="controls-bar">
@@ -102,174 +65,45 @@ body{
     <div class="ctrl-btn" id="next-btn">⏭</div>
 </div>
 
-<script src="https://www.youtube.com/iframe_api"></script>
-
 <script>
-let player;
-let playerReady = false;
-
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
   "09R8_2nJtjg","YqeW9_5kURI","fLexgOxsZu0","K0ibBPhiaG0","d9MyW72ELq0"
 ];
+
 let currentIndex = 0;
+let isPlaying = false;
 
-function onYouTubeIframeAPIReady(){
-    player = new YT.Player('player', {
-        videoId: playlist[currentIndex],
-        playerVars:{
-            autoplay:0,
-            controls:1,
-            playsinline:1,
-            rel:0
-        },
-        events:{
-            onReady: function(){
-                playerReady = true;
-            }
-        }
-    });
-}
-
-const box = document.getElementById("floating-player");
-const dragHandle = document.getElementById("drag-handle");
-const resizeHandle = document.getElementById("resize-handle");
+const frame = document.getElementById("playerFrame");
 const playBtn = document.getElementById("play-btn");
 const stopBtn = document.getElementById("stop-btn");
 const nextBtn = document.getElementById("next-btn");
+const box = document.getElementById("floating-player");
 
-let isDragging = false;
-let isResizing = false;
-let startX, startY, startWidth, startHeight;
-let startSwipeY;
+function loadVideo(autoplay=false){
+    frame.src =
+      "https://www.youtube.com/embed/" +
+      playlist[currentIndex] +
+      "?playsinline=1&rel=0" +
+      (autoplay ? "&autoplay=1" : "");
+}
 
-let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
-
-/* DRAG */
-dragHandle.addEventListener("pointerdown", e=>{
-    isDragging = true;
-    startX = e.clientX - box.offsetLeft;
-    startY = e.clientY - box.offsetTop;
-    dragHandle.style.cursor="grabbing";
-});
-
-document.addEventListener("pointermove", e=>{
-    if(isDragging){
-        box.style.left = (e.clientX - startX) + "px";
-        box.style.top = (e.clientY - startY) + "px";
-        box.style.right = "auto";
-        box.style.bottom = "auto";
-    }
-
-    if(isResizing){
-        let newWidth = startWidth + (e.clientX - startX);
-        let newHeight = startHeight + (e.clientY - startY);
-        if(newWidth > 120 && newHeight > 70){
-            box.style.width = newWidth + "px";
-            box.style.height = newHeight + "px";
-        }
-    }
-});
-
-document.addEventListener("pointerup", ()=>{
-    if(isDragging){
-        isDragging=false;
-        dragHandle.style.cursor="grab";
-        savePosition();
-    }
-    if(isResizing){
-        isResizing = false;
-        savePosition();
-    }
-});
-
-/* RESIZE */
-resizeHandle.addEventListener("pointerdown", e=>{
-    isResizing = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    startWidth = box.offsetWidth;
-    startHeight = box.offsetHeight;
-});
-
-/* PLAY BUTTON – FINAL UNLOCK VERSION */
-playBtn.addEventListener("pointerdown", e=>{
-    startSwipeY = e.clientY;
-});
-
-playBtn.addEventListener("pointerup", e=>{
-    if(!playerReady) return;
-
-    let diffY = startSwipeY - e.clientY;
-
-    if(Math.abs(diffY) < 50){
-
-        if(player.getPlayerState() !== 1){
-
-            let originalVolume = player.getVolume();
-
-            // 1. unlock muted autoplay
-            player.mute();
-            player.playVideo();
-
-            setTimeout(()=>{
-
-                // 2. stop odmah
-                player.pauseVideo();
-
-                // 3. vrati zvuk
-                player.unMute();
-                player.setVolume(originalVolume);
-
-                // 4. pusti normalno
-                player.playVideo();
-
-            }, 120);
-        }
-    }
-
-    // SWIPE
-    if(Math.abs(diffY) > 50){
-        if(box.style.transform === "translateY(200vh)"){
-            showPlayer();
-        } else {
-            hidePlayer();
-        }
-    }
+playBtn.addEventListener("click", ()=>{
+    box.style.transform = "translateY(0)";
+    loadVideo(true);
+    isPlaying = true;
 });
 
 stopBtn.addEventListener("click", ()=>{
-    if(playerReady) player.pauseVideo();
+    frame.src = "";
+    isPlaying = false;
 });
 
 nextBtn.addEventListener("click", ()=>{
-    if(!playerReady) return;
     currentIndex = (currentIndex + 1) % playlist.length;
-    player.loadVideoById(playlist[currentIndex]);
-    player.playVideo();
+    loadVideo(true);
 });
-
-function showPlayer(){
-    if(savedPos.left !== null && savedPos.top !== null){
-        box.style.left = savedPos.left + "px";
-        box.style.top = savedPos.top + "px";
-    } else {
-        box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
-        box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
-    }
-    box.style.transform = "translateY(0)";
-}
-
-function hidePlayer(){
-    box.style.transform = "translateY(200vh)";
-}
-
-function savePosition(){
-    savedPos.left = box.offsetLeft;
-    savedPos.top = box.offsetTop;
-    localStorage.setItem("playerPos", JSON.stringify(savedPos));
-}
 </script>
 
 </body>
