@@ -3,82 +3,87 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Test: iframe.src autoplay (no JS API)</title>
+<title>Video uvek vidljiv — test</title>
 <style>
-  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#111;color:#eee}
-  .wrap{max-width:900px;margin:18px auto;padding:12px}
-  .media-slider{width:100%;height:280px;overflow:hidden;position:relative;border-radius:12px;background:#000;display:flex}
-  .panel{flex:0 0 50%;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
-  .panel.image{background:#111}
-  .panel.video{background:#000}
-  .video-wrap{width:100%;max-width:640px;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
-  .video-wrap iframe{width:100%;height:100%;border:0;display:block}
-  .controls{margin-top:14px;display:flex;gap:10px;align-items:center}
-  .btn{padding:12px 18px;border-radius:10px;border:0;background:#6b8e23;color:#fff;font-weight:700;cursor:pointer}
-  .btn.gray{background:#666}
-  .thumbs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-  .thumb{width:120px;height:68px;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent}
+  :root{--bg:#111;--muted:#bbb;--accent:#6b8e23}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#eee}
+  .wrap{max-width:980px;margin:18px auto;padding:16px}
+  h1{margin:0 0 12px 0;font-size:18px}
+  .layout{display:flex;gap:16px;align-items:flex-start}
+  .left{flex:1;min-width:260px}
+  .right{flex:1.4;min-width:360px}
+  .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .thumb{width:120px;height:68px;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;box-sizing:border-box}
   .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .thumb.active{border-color:#6b8e23}
-  .hint{margin-top:10px;color:#ccc;font-size:13px}
+  .thumb.active{border-color:var(--accent)}
+  .controls{display:flex;gap:8px;margin-top:12px;align-items:center}
+  .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+  .btn.gray{background:#666}
+  .hint{margin-top:8px;color:var(--muted);font-size:13px}
+  /* video area */
+  .video-box{background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+  .video-wrap{width:100%;max-width:720px;aspect-ratio:16/9;background:#000}
+  .video-wrap iframe{width:100%;height:100%;border:0;display:block}
+  .open-youtube{margin-left:auto}
+  /* small responsive */
+  @media (max-width:820px){
+    .layout{flex-direction:column}
+    .right{order:2}
+    .left{order:1}
+  }
 </style>
 </head>
 <body>
   <div class="wrap">
-    <h2>Test: autoplay postavljanjem iframe.src (bez IFrame API)</h2>
+    <h1>Video (uvek vidljiv)</h1>
 
-    <div id="mediaWrap" class="media-slider" aria-hidden="false">
-      <!-- image panel -->
-      <div id="imagePanel" class="panel image">
-        <div>
-          <div style="font-size:18px;margin-bottom:8px">Izaberi video:</div>
-          <div class="thumbs" id="thumbs"></div>
+    <div class="layout">
+      <div class="left">
+        <div style="font-size:14px">Izaberi video:</div>
+        <div id="thumbs" class="thumbs"></div>
+
+        <div class="controls">
+          <button id="playBtn" class="btn">▶ PLAY (pokušaj autoplay)</button>
+          <button id="stopBtn" class="btn gray">■ STOP (ukloni)</button>
+          <button id="openBtn" class="btn gray open-youtube">Open in YouTube</button>
+        </div>
+
+        <div class="hint">
+          Napomena: Via Browser može blokirati automatsko puštanje. Ako se ništa ne čuje pri pritisku PLAY, klikni direktno u video ili izaberi "Open in YouTube".  
         </div>
       </div>
 
-      <!-- video panel -->
-      <div id="videoPanel" class="panel video">
-        <div class="video-wrap">
-          <!-- iframe bez enablejsapi -->
-          <iframe id="ytPlayer" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      <div class="right">
+        <div class="video-box">
+          <div class="video-wrap" id="videoWrap">
+            <!-- iframe bez enablejsapi (povećava šansu za autoplay kad se src menja u user gesture) -->
+            <iframe id="ytPlayer" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="controls">
-      <button id="playBtn" class="btn">▶ PLAY (postavi src & autoplay)</button>
-      <button id="showVideoBtn" class="btn gray">Prikaži video panel</button>
-      <button id="hideVideoBtn" class="btn gray">Prikaži sliku</button>
-    </div>
-
-    <div class="hint">
-      Test: izaberi thumbnail, pa pritisni PLAY. Ako Via Browser blokira autoplay, pokušaj isto u Chrome-u.  
-      Napomena: **važno** — PLAY mora da bude *direktan* klik (bez setTimeout/async) da bi šansa za autoplay bila veća.
     </div>
   </div>
 
 <script>
 (function(){
-  // sample video URL-evi (možeš ih menjati)
+  // lista sample videa (možeš dodavati svoje URL-e)
   const videos = [
     'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     'https://www.youtube.com/watch?v=3tmd-ClpJxA',
     'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
-    'https://www.youtube.com/watch?v=fRh_vgS2dFE'
+    'https://www.youtube.com/watch?v=fRh_vgS2dFE',
+    'https://www.youtube.com/watch?v=RgKAFK5djSk'
   ];
 
   const thumbsEl = document.getElementById('thumbs');
   const ytIframe = document.getElementById('ytPlayer');
   const playBtn = document.getElementById('playBtn');
-  const showVideoBtn = document.getElementById('showVideoBtn');
-  const hideVideoBtn = document.getElementById('hideVideoBtn');
-  const mediaWrap = document.getElementById('mediaWrap');
-  const imagePanel = document.getElementById('imagePanel');
-  const videoPanel = document.getElementById('videoPanel');
+  const stopBtn = document.getElementById('stopBtn');
+  const openBtn = document.getElementById('openBtn');
 
-  let currentVideoUrl = videos[0];
+  let currentIndex = 0;
+  let currentVideoUrl = videos[currentIndex];
 
-  // helper: ekstra mali get ID
   function extractYouTubeId(url){
     if(!url) return null;
     let m = url.match(/[?&]v=([^&]+)/);
@@ -89,72 +94,101 @@
     return null;
   }
 
-  // populate thumbnails
+  // populate thumbs
   videos.forEach((u, idx) => {
     const id = extractYouTubeId(u);
     const div = document.createElement('div');
     div.className = 'thumb' + (idx===0 ? ' active' : '');
+    div.dataset.index = idx;
     div.dataset.url = u;
     div.innerHTML = `<img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="thumb">`;
     div.addEventListener('click', function(){
-      // izbaci aktivnu klasu
+      // aktiviraj
       document.querySelectorAll('.thumb').forEach(t=>t.classList.remove('active'));
       div.classList.add('active');
-      currentVideoUrl = u;
+      currentIndex = parseInt(div.dataset.index, 10);
+      currentVideoUrl = div.dataset.url;
+      // prikaži video (ali bez autoplay) - iframe će biti vidljiv
+      loadVideoNoAutoplay(currentVideoUrl);
     });
     thumbsEl.appendChild(div);
   });
 
-  // funkcija koja postavlja src direktno sa autoplay=1 (bez enablejsapi)
-  function showEmbeddedYoutube(url) {
-    const id = extractYouTubeId(url);
-    if(!id) return;
-    // ako već isti id, ne radimo ništa (sprečava reload)
-    if (ytIframe.dataset.videoId === id) return;
-
-    // koristimo origin zbog CORS/AUTOPLAY scenarija (može biti window.location.origin)
-    const origin = window.location.origin || 'https://example.com';
-    const embed = 'https://www.youtube-nocookie.com/embed/' + id +
-      '?autoplay=1' +
+  // load iframe with autoplay param toggleable
+  function buildEmbedUrl(id, autoplay){
+    if(!id) return '';
+    // koristimo nocookie varijantu i bez enablejsapi
+    const autoplayPart = autoplay ? '1' : '0';
+    return 'https://www.youtube-nocookie.com/embed/' + id +
+      '?autoplay=' + autoplayPart +
       '&playsinline=1' +
       '&rel=0' +
       '&modestbranding=1' +
       '&iv_load_policy=3' +
       '&controls=1';
+  }
 
-    // VAŽNO: direktno dodeljujemo src u istom click handleru (bez setTimeout)
+  // load but without autoplay (to be visible)
+  function loadVideoNoAutoplay(url){
+    const id = extractYouTubeId(url);
+    if(!id) return;
+    const embed = buildEmbedUrl(id, 0);
     ytIframe.src = embed;
     ytIframe.dataset.videoId = id;
   }
 
-  function setPanelToVideo(){
-    // jednostavan switch (translateX)
-    mediaWrap.style.transform = 'translateX(-50%)';
-    mediaWrap.style.transition = 'transform 300ms ease';
+  // play attempt: set src with autoplay=1 synchronously in click handler
+  function playVideoFromGesture(url){
+    const id = extractYouTubeId(url);
+    if(!id) return;
+    // if same id already loaded, still set src with autoplay=1 to increase chance
+    const embed = buildEmbedUrl(id, 1);
+    ytIframe.src = embed;
+    ytIframe.dataset.videoId = id;
   }
 
-  function setPanelToImage(){
-    mediaWrap.style.transform = 'translateX(0%)';
-    mediaWrap.style.transition = 'transform 300ms ease';
+  // stop: remove src (completely stops playback)
+  function stopVideoCompletely(){
+    // set empty src to stop and free resources
+    ytIframe.src = '';
+    delete ytIframe.dataset.videoId;
   }
 
-  // play button: DIREKTNO pozivaj showEmbeddedYoutube u click handleru
-  playBtn.addEventListener('click', function(){
-    // *direktan* poziv — NIŠTA asinhrono pre toga
-    showEmbeddedYoutube(currentVideoUrl);
-    // opciono odmah prikazemo video panel — time se može izgubiti gesture u nekim browserima
-    // ako primetiš da prilikom prikaza panel animation autoplay biva blokiran, probaj da komentarišeš ovu liniju
-    setPanelToVideo();
+  // open in YouTube fallback
+  function openInYouTube(url){
+    if(!url) return;
+    const id = extractYouTubeId(url);
+    if(!id) return;
+    const youtubeUrl = 'https://www.youtube.com/watch?v=' + id;
+    // otvori u novom tabu
+    window.open(youtubeUrl, '_blank');
+  }
+
+  // inicijalno prikazi prvi video bez autoplay
+  loadVideoNoAutoplay(currentVideoUrl);
+
+  // event handlers — direktni (synchronous) pozivi
+  playBtn.addEventListener('click', function(e){
+    // direktan sync poziv -> postavljanje src sa autoplay=1
+    playVideoFromGesture(currentVideoUrl);
   }, false);
 
-  // opcije za ručno prikaz/skrivanje panela
-  showVideoBtn.addEventListener('click', function(){ setPanelToVideo(); }, false);
-  hideVideoBtn.addEventListener('click', function(){ setPanelToImage(); }, false);
+  stopBtn.addEventListener('click', function(){
+    stopVideoCompletely();
+  }, false);
 
-  // init: postavimo širinu mediaWrap da bude 200% (2 panela) i inline style za animaciju
-  mediaWrap.style.width = '200%';
-  // pojedinačni paneli su po 50% (CSS flex)
-  mediaWrap.style.transform = 'translateX(0%)';
+  openBtn.addEventListener('click', function(){
+    openInYouTube(currentVideoUrl);
+  }, false);
+
+  // keyboard shortcut: space -> play/pause via opening in new src (best-effort)
+  document.addEventListener('keydown', function(e){
+    if(e.code === 'Space'){
+      e.preventDefault();
+      playVideoFromGesture(currentVideoUrl);
+    }
+  });
+
 })();
 </script>
 </body>
