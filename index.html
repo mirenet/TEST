@@ -193,7 +193,7 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON – STABILNI UNLOCK */
+/* PLAY BUTTON – FINAL UNLOCK VERSION */
 playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
 });
@@ -203,31 +203,29 @@ playBtn.addEventListener("pointerup", e=>{
 
     let diffY = startSwipeY - e.clientY;
 
-    // TAP
     if(Math.abs(diffY) < 50){
 
         if(player.getPlayerState() !== 1){
 
-            let wasMuted = player.isMuted();
             let originalVolume = player.getVolume();
 
+            // 1. unlock muted autoplay
             player.mute();
             player.playVideo();
 
-            let checkInterval = setInterval(()=>{
-                if(player.getPlayerState() === 1){
-                    clearInterval(checkInterval);
-
-                    if(!wasMuted){
-                        player.unMute();
-                        player.setVolume(originalVolume);
-                    }
-                }
-            }, 100);
-
             setTimeout(()=>{
-                clearInterval(checkInterval);
-            }, 3000);
+
+                // 2. stop odmah
+                player.pauseVideo();
+
+                // 3. vrati zvuk
+                player.unMute();
+                player.setVolume(originalVolume);
+
+                // 4. pusti normalno
+                player.playVideo();
+
+            }, 120);
         }
     }
 
@@ -241,7 +239,6 @@ playBtn.addEventListener("pointerup", e=>{
     }
 });
 
-/* STOP / NEXT */
 stopBtn.addEventListener("click", ()=>{
     if(playerReady) player.pauseVideo();
 });
@@ -253,7 +250,6 @@ nextBtn.addEventListener("click", ()=>{
     player.playVideo();
 });
 
-/* SHOW/HIDE */
 function showPlayer(){
     if(savedPos.left !== null && savedPos.top !== null){
         box.style.left = savedPos.left + "px";
