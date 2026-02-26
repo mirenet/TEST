@@ -10,7 +10,7 @@ body{
     margin:0;
     height:200vh;
     background:#111;
-    font-family:Arial, sans-serif;
+    font-family:Arial;
     color:white;
 }
 
@@ -25,10 +25,8 @@ body{
     overflow:hidden;
     z-index:9999;
     touch-action:none;
-    /* sakrivanje preko opacity umesto translateY */
-    opacity:0;
-    pointer-events:none;
-    transition: opacity 0.3s ease;
+    transform: translateY(200vh);
+    transition: transform 0.3s ease;
 }
 
 /* Drag area */
@@ -59,6 +57,7 @@ body{
 #player{
     width:100%;
     height:100%;
+    border:none;
 }
 
 /* Controls bar */
@@ -106,7 +105,7 @@ body{
 
 <div id="floating-player">
     <div id="drag-handle"></div>
-    <div id="player"></div>
+    <iframe id="player" allow="autoplay; fullscreen" allowfullscreen></iframe>
     <div id="resize-handle"></div>
 </div>
 
@@ -116,12 +115,7 @@ body{
     <div class="ctrl-btn" id="next-btn">⏭</div>
 </div>
 
-<script src="https://www.youtube.com/iframe_api"></script>
-
 <script>
-let player;
-
-/* Playlist 15 muzičkih videa */
 const playlist = [
   "dQw4w9WgXcQ","3tmd-ClpJxA","L_jWHffIx5E","kJQP7kiw5Fk","fRh_vgS2dFE",
   "RgKAFK5djSk","CevxZvSJLk8","2Vv-BfVoq4g","uelHwf8o7_U","hT_nvWreIhg",
@@ -129,120 +123,98 @@ const playlist = [
 ];
 let currentIndex = 0;
 
-function onYouTubeIframeAPIReady(){
-    player = new YT.Player('player', {
-        videoId: playlist[currentIndex],
-        playerVars:{
-            autoplay:0,
-            controls:1,
-            playsinline:1,
-            rel:0
-        }
-    });
+const iframe = document.getElementById("player");
+
+function loadVideo(index){
+    const id = playlist[index];
+    iframe.src = `https://www.youtube.com/embed/${id}?autoplay=0&controls=1&playsinline=1&rel=0`;
 }
 
-/* Floating player */
+/* INIT */
+loadVideo(currentIndex);
+
+/* Floating player drag/resize */
 const box = document.getElementById("floating-player");
 const dragHandle = document.getElementById("drag-handle");
 const resizeHandle = document.getElementById("resize-handle");
-const playBtn = document.getElementById("play-btn");
-const stopBtn = document.getElementById("stop-btn");
-const nextBtn = document.getElementById("next-btn");
 
-let isDragging = false;
-let isResizing = false;
+let isDragging=false, isResizing=false;
 let startX, startY, startWidth, startHeight;
 
-/* Load saved position */
 let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
 
-/* DRAGGING */
+/* DRAG */
 dragHandle.addEventListener("pointerdown", e=>{
-    isDragging = true;
+    isDragging=true;
     startX = e.clientX - box.offsetLeft;
     startY = e.clientY - box.offsetTop;
     dragHandle.style.cursor="grabbing";
 });
-
 document.addEventListener("pointermove", e=>{
     if(isDragging){
-        box.style.left = (e.clientX - startX) + "px";
-        box.style.top = (e.clientY - startY) + "px";
-        box.style.right = "auto";
-        box.style.bottom = "auto";
+        box.style.left = (e.clientX-startX)+"px";
+        box.style.top = (e.clientY-startY)+"px";
+        box.style.right="auto";
+        box.style.bottom="auto";
     }
-
     if(isResizing){
-        let newWidth = startWidth + (e.clientX - startX);
-        let newHeight = startHeight + (e.clientY - startY);
-
-        if(newWidth > 120 && newHeight > 70){
-            box.style.width = newWidth + "px";
-            box.style.height = newHeight + "px";
+        let w = startWidth + (e.clientX-startX);
+        let h = startHeight + (e.clientY-startY);
+        if(w>120 && h>70){
+            box.style.width=w+"px";
+            box.style.height=h+"px";
         }
     }
 });
-
 document.addEventListener("pointerup", e=>{
-    if(isDragging){
-        isDragging=false;
-        dragHandle.style.cursor="grab";
-        savePosition();
-    }
-    if(isResizing){
-        isResizing = false;
-        savePosition();
-    }
+    if(isDragging){isDragging=false; dragHandle.style.cursor="grab"; savePosition();}
+    if(isResizing){isResizing=false; savePosition();}
 });
 
 /* RESIZE */
 resizeHandle.addEventListener("pointerdown", e=>{
-    isResizing = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    startWidth = box.offsetWidth;
-    startHeight = box.offsetHeight;
+    isResizing=true;
+    startX=e.clientX;
+    startY=e.clientY;
+    startWidth=box.offsetWidth;
+    startHeight=box.offsetHeight;
 });
 
-/* PLAY BUTTON: direktan click za valid user gesture */
-playBtn.addEventListener("click", function(){
-    if(!player) return;
+/* Controls */
+const playBtn = document.getElementById("play-btn");
+const stopBtn = document.getElementById("stop-btn");
+const nextBtn = document.getElementById("next-btn");
 
-    // Prikaži player ako je skriven
-    box.style.opacity = 1;
-    box.style.pointerEvents = "auto";
-
-    // Direktno playVideo() u istom call stack-u
-    player.playVideo();
+playBtn.addEventListener("click", ()=>{
+    // Reload iframe src sa autoplay=1 da bi se video pustio sa zvukom
+    const id = playlist[currentIndex];
+    iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&controls=1&playsinline=1&rel=0`;
 });
 
-/* STOP / NEXT BUTTONS */
 stopBtn.addEventListener("click", ()=>{
-    player.pauseVideo();
+    // Reload iframe sa autoplay=0 da zaustavi video
+    const id = playlist[currentIndex];
+    iframe.src = `https://www.youtube.com/embed/${id}?autoplay=0&controls=1&playsinline=1&rel=0`;
 });
 
 nextBtn.addEventListener("click", ()=>{
     currentIndex = (currentIndex + 1) % playlist.length;
-    player.loadVideoById(playlist[currentIndex]);
-    player.playVideo();
+    iframe.src = `https://www.youtube.com/embed/${playlist[currentIndex]}?autoplay=1&controls=1&playsinline=1&rel=0`;
 });
 
-/* SHOW/HIDE OFFSCREEN */
+/* SHOW/HIDE */
 function showPlayer(){
-    if(savedPos.left !== null && savedPos.top !== null){
-        box.style.left = savedPos.left + "px";
-        box.style.top = savedPos.top + "px";
+    if(savedPos.left!==null && savedPos.top!==null){
+        box.style.left = savedPos.left+"px";
+        box.style.top = savedPos.top+"px";
     } else {
-        box.style.left = (window.innerWidth/2 - box.offsetWidth/2) + "px";
-        box.style.top = (window.innerHeight/2 - box.offsetHeight/2) + "px";
+        box.style.left = (window.innerWidth/2 - box.offsetWidth/2)+"px";
+        box.style.top = (window.innerHeight/2 - box.offsetHeight/2)+"px";
     }
-    box.style.opacity = 1;
-    box.style.pointerEvents = "auto";
+    box.style.transform="translateY(0)";
 }
-
 function hidePlayer(){
-    box.style.opacity = 0;
-    box.style.pointerEvents = "none";
+    box.style.transform="translateY(200vh)";
 }
 
 /* SAVE POSITION */
