@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>YouTube Autoplay + Mute Toggle</title>
+<title>YouTube autoplay + Mute Toggle (Stable)</title>
 
 <style>
 body{
@@ -46,7 +46,7 @@ button{
 <body>
 <div class="wrap">
 
-<h2>YouTube autoplay (muted) + Unmute + Play</h2>
+<h2>YouTube autoplay (muted) + Unmute/Play</h2>
 
 <div class="player-wrap">
   <div id="player"></div>
@@ -63,9 +63,10 @@ button{
 let player;
 let isMuted = true;
 
-// MENJAŠ SAMO OVO
+// VIDEO ID — promeni po potrebi
 const VIDEO_ID = "79fzeNUqQbQ";
 
+// inicijalizacija player-a
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('player', {
     videoId: VIDEO_ID,
@@ -78,20 +79,20 @@ function onYouTubeIframeAPIReady() {
     },
     events: {
       onReady: function(event) {
-        event.target.mute();
-        event.target.playVideo();
+        event.target.mute();       // start mutiran
+        event.target.playVideo();  // start autoplay
       }
     }
   });
 }
 
+// dugme za mute/unmute
 document.getElementById("muteToggle").addEventListener("click", function(){
-
   if (!player) return;
 
   if (isMuted) {
     player.unMute();
-    player.playVideo();   // 🔥 KLJUČNA LINIJA
+    player.playVideo();   // 🔑 unMute + play u istom click eventu
     this.textContent = "Mute";
     isMuted = false;
   } else {
@@ -99,7 +100,6 @@ document.getElementById("muteToggle").addEventListener("click", function(){
     this.textContent = "Unmute & Play";
     isMuted = true;
   }
-
 });
 </script>
 
