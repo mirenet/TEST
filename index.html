@@ -142,9 +142,11 @@ const nextBtn = document.getElementById("next-btn");
 let isDragging = false;
 let isResizing = false;
 let startX, startY, startWidth, startHeight;
+let startSwipeY;
 
 let savedPos = JSON.parse(localStorage.getItem("playerPos")) || {left:null, top:null};
 
+/* DRAG */
 dragHandle.addEventListener("pointerdown", e=>{
     isDragging = true;
     startX = e.clientX - box.offsetLeft;
@@ -182,6 +184,7 @@ document.addEventListener("pointerup", ()=>{
     }
 });
 
+/* RESIZE */
 resizeHandle.addEventListener("pointerdown", e=>{
     isResizing = true;
     startX = e.clientX;
@@ -190,9 +193,7 @@ resizeHandle.addEventListener("pointerdown", e=>{
     startHeight = box.offsetHeight;
 });
 
-/* PLAY BUTTON + SILENT UNLOCK */
-let startSwipeY;
-
+/* PLAY BUTTON – STABILNI UNLOCK */
 playBtn.addEventListener("pointerdown", e=>{
     startSwipeY = e.clientY;
 });
@@ -202,29 +203,35 @@ playBtn.addEventListener("pointerup", e=>{
 
     let diffY = startSwipeY - e.clientY;
 
-    // TAP → silent unlock play
+    // TAP
     if(Math.abs(diffY) < 50){
 
-        let state = player.getPlayerState();
-
-        if(state !== 1){
+        if(player.getPlayerState() !== 1){
 
             let wasMuted = player.isMuted();
-            let currentVolume = player.getVolume();
+            let originalVolume = player.getVolume();
 
             player.mute();
             player.playVideo();
 
-            setTimeout(()=>{
-                if(!wasMuted){
-                    player.unMute();
-                    player.setVolume(currentVolume);
+            let checkInterval = setInterval(()=>{
+                if(player.getPlayerState() === 1){
+                    clearInterval(checkInterval);
+
+                    if(!wasMuted){
+                        player.unMute();
+                        player.setVolume(originalVolume);
+                    }
                 }
-            }, 250);
+            }, 100);
+
+            setTimeout(()=>{
+                clearInterval(checkInterval);
+            }, 3000);
         }
     }
 
-    // SWIPE → show/hide
+    // SWIPE
     if(Math.abs(diffY) > 50){
         if(box.style.transform === "translateY(200vh)"){
             showPlayer();
@@ -234,6 +241,7 @@ playBtn.addEventListener("pointerup", e=>{
     }
 });
 
+/* STOP / NEXT */
 stopBtn.addEventListener("click", ()=>{
     if(playerReady) player.pauseVideo();
 });
@@ -245,6 +253,7 @@ nextBtn.addEventListener("click", ()=>{
     player.playVideo();
 });
 
+/* SHOW/HIDE */
 function showPlayer(){
     if(savedPos.left !== null && savedPos.top !== null){
         box.style.left = savedPos.left + "px";
