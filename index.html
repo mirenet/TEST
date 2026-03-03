@@ -6,13 +6,13 @@
 <style>
 #container {
     position: relative;
-    width: 50px;
-    height: 50px;
+    width: 150px;
+    height: 150px;
 }
 #fake-button {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 350%;
+    left: 150%;
     width: 100%;
     height: 100%;
     z-index: 1;
@@ -21,8 +21,8 @@
 }
 #youtube-player {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 350%;
+    left: 150%;
     width: 100%;       /* minimalna veličina za registraciju klika */
     height: 100%;
     z-index: 2;
@@ -35,7 +35,7 @@
 
 <div id="container">
     <!-- Dugme koje korisnik vidi -->
-    <button id="fake-button">Klikni da pokreneš video</button>
+    <button id="fake-button">Klik</button>
 
     <!-- YouTube iframe 1x1 px iznad dugmeta -->
     <iframe id="youtube-player"
