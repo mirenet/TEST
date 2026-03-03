@@ -1,21 +1,53 @@
-<div style="position: relative; width: 560px; height: 315px;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>YouTube WebView Click Trick</title>
+<style>
+#container {
+    position: relative;
+    width: 560px;
+    height: 315px;
+}
+#fake-button {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    font-size: 20px;
+    cursor: pointer;
+}
+#youtube-player {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1px;       /* minimalna veličina za registraciju klika */
+    height: 1px;
+    z-index: 2;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+}
+</style>
+</head>
+<body>
+
+<div id="container">
     <!-- Dugme koje korisnik vidi -->
-    <button id="fake-button"
-            style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:1;">
-        Klikni da pokreneš video
-    </button>
+    <button id="fake-button">Klikni da pokreneš video</button>
 
     <!-- YouTube iframe 1x1 px iznad dugmeta -->
     <iframe id="youtube-player"
             src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1&autoplay=0"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-            style="position: absolute; top: 50%; left: 50%; width: 1px; height: 1px; z-index: 2; opacity:0;">
+            allowfullscreen>
     </iframe>
 </div>
 
 <script>
+// Učitaj YouTube API
 var tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 var firstScriptTag = document.getElementsByTagName('script')[0];
@@ -26,14 +58,17 @@ function onYouTubeIframeAPIReady() {
     player = new YT.Player('youtube-player', {
         events: {
             'onReady': function() {
-                // Klik na dugme zapravo pogađa iframe
                 const button = document.getElementById('fake-button');
                 button.addEventListener('click', () => {
-                    // player.playVideo(); // opcionalno, autoplay ce raditi jer je klik registrovan
-                    button.style.display = 'none'; // dugme nestaje
+                    // Klik korisnika pada na iframe → autoplay radi
+                    player.playVideo(); // opcionalno, možeš direktno pokrenuti video
+                    button.style.display = 'none'; // uklanja dugme
                 });
             }
         }
     });
 }
 </script>
+
+</body>
+</html>
