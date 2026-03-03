@@ -1,209 +1,56 @@
 <!DOCTYPE html>
-<html lang="sr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Smart Local HTML Loader</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-    body {
-        margin: 0;
-        padding: 0;
-        background: #111;
-        color: #fff;
-        font-family: Arial, sans-serif;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    #container {
-        width: calc(100% - 80px);
-        max-width: 400px;
-        padding: 30px;
-        background: #1e1e1e;
-        border-radius: 12px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        text-align: center;
-        box-sizing: border-box;
-    }
-
-    h2 {
-        margin-bottom: 15px;
-        font-size: 16px;
-        font-weight: 500;
-        line-height: 1.4;
-    }
-
-    input[type="password"] {
-        width: 100%;
-        padding: 10px;
-        font-size: 14px;
-        border-radius: 8px;
-        border: none;
-        margin-bottom: 20px;
-        box-sizing: border-box;
-    }
-
-    button {
-        width: 100%;
-        padding: 12px;
-        font-size: 14px;
-        border: none;
-        border-radius: 8px;
-        background: #2b2b2b;
-        color: #fff;
-        cursor: pointer;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        transition: background 0.2s, transform 0.2s;
-    }
-
-    button:active {
-        transform: scale(0.97);
-        background: #3a3a3a;
-    }
-</style>
+<title>YouTube Autoplay Test</title>
 </head>
 <body>
-<div id="container">
-    <h2>Enter Password:</h2>
-    <input type="password" id="passwordInput" placeholder="Your Password...">
-    <button id="submitBtn">Enter</button>
+
+<div id="video-container" style="position: relative; width: 560px; height: 315px;">
+    <!-- YouTube iframe potpuno sakriven -->
+    <iframe id="youtube-player" 
+            width="560" 
+            height="315"
+            src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1&autoplay=0" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen
+            style="position:absolute; top:0; left:0; z-index:1; opacity:0; pointer-events:none;">
+    </iframe>
+
+    <!-- Dugme preko plejera -->
+    <button id="play-button" 
+            style="position:absolute; top:0; left:0; width:560px; height:315px; z-index:2;">
+        Klikni da pokreneš video
+    </button>
 </div>
 
 <script>
-// ===============================
-// SALT + HASH (PBKDF2 + SHA512)
-// ===============================
-const SALT = "BqRTU665xVuWGxHCxf484g==";
-const STORED_HASH = "4Er5MpbPLxEvHGCI+WdAOHIyESnGUHDSeGLb5+kOVOo=";
+// Učitaj YouTube API
+var tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+var firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-async function hashPassword(password, salt) {
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-        "raw",
-        enc.encode(password),
-        {name: "PBKDF2"},
-        false,
-        ["deriveBits", "deriveKey"]
-    );
-
-    const key = await crypto.subtle.deriveKey(
-        {
-            name: "PBKDF2",
-            salt: enc.encode(salt),
-            iterations: 100000,
-            hash: "SHA-512"
-        },
-        keyMaterial,
-        {name: "AES-GCM", length: 256},
-        true,
-        ["encrypt", "decrypt"]
-    );
-
-    const rawKey = await crypto.subtle.exportKey("raw", key);
-    return btoa(String.fromCharCode(...new Uint8Array(rawKey)));
-}
-
-async function checkPassword(password) {
-    const hashed = await hashPassword(password, SALT);
-    return hashed === STORED_HASH;
-}
-
-// ===============================
-// IndexedDB
-// ===============================
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const req = indexedDB.open("localHTMLdb", 1);
-        req.onupgradeneeded = () => req.result.createObjectStore("htmlStore");
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = e => reject(e);
+var player;
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('youtube-player', {
+        events: {
+            'onReady': onPlayerReady
+        }
     });
 }
 
-async function saveHTML(text) {
-    const db = await openDB();
-    const tx = db.transaction("htmlStore", "readwrite");
-    tx.objectStore("htmlStore").put(text, "lastHTML");
-    return tx.complete;
-}
-
-async function loadHTML() {
-    const db = await openDB();
-    return new Promise(resolve => {
-        const tx = db.transaction("htmlStore", "readonly");
-        const req = tx.objectStore("htmlStore").get("lastHTML");
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => resolve(null);
+function onPlayerReady(event) {
+    const button = document.getElementById('play-button');
+    button.addEventListener('click', () => {
+        player.playVideo();             // autoplay kao rezultat user gesture
+        button.style.display = 'none';  // ukloni dugme
+        document.getElementById('youtube-player').style.opacity = 1; // video postaje vidljiv
+        document.getElementById('youtube-player').style.pointerEvents = 'auto';
     });
-}
-
-// ===============================
-// Pokreni HTML
-// ===============================
-function runHTML(html){
-    document.open();
-    document.write(html);
-    document.close();
-}
-
-// ===============================
-// Start – ako već postoji HTML, odmah ga učitaj
-// ===============================
-(async function() {
-    const previous = await loadHTML();
-    if (previous) {
-        runHTML(previous);
-        return;
-    }
-})();
-
-// ===============================
-// Dugme za lozinku
-// ===============================
-document.getElementById("submitBtn").onclick = async () => {
-    const pw = document.getElementById("passwordInput").value;
-    if (!pw) return;
-
-    const ok = await checkPassword(pw);
-    if (!ok) {
-        alert("Wrong password!");
-        return;
-    }
-
-    showPickerUI();
-};
-
-// ===============================
-// UI za instalaciju
-// ===============================
-function showPickerUI() {
-    const container = document.getElementById("container");
-
-    container.innerHTML = `
-        <h2>Welcome!<br>Select HTML for installation…<br><br></h2>
-        <input type="file" id="fileInput" accept=".html" style="display:none">
-        <button id="pickBtn">HTML</button>
-    `;
-
-    // Klik → otvori picker
-    document.getElementById("pickBtn").onclick = () => {
-        document.getElementById("fileInput").click();
-    };
-
-    // File izabran
-    document.getElementById("fileInput").onchange = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const text = await file.text();
-
-        await saveHTML(text);
-        runHTML(text);
-    };
 }
 </script>
+
 </body>
 </html>
