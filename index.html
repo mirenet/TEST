@@ -19,22 +19,20 @@ function getVideoId() {
 }
 
 window.onYouTubeIframeAPIReady = function () {
-  const id = getVideoId();
 
-  if (!isValidVideoId(id)) {
-    console.log("Invalid ID:", id);
-    return;
-  }
+  const id = getVideoId();
+  if (!isValidVideoId(id)) return;
 
   player = new YT.Player('player', {
-    height: '360',
+    height: '390',
     width: '640',
     videoId: id,
     playerVars: {
-      autoplay: 1,
-      controls: 1
+      controls: 1,
+      autoplay: 0
     }
   });
+
 };
 </script>
 
