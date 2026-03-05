@@ -2,27 +2,15 @@
 <html>
 <body>
 
-<iframe id="player"
+<h3>YouTube embed test</h3>
+
+<iframe
 width="640"
 height="360"
+src="https://www.youtube.com/embed/GuJQSAiODqI"
 frameborder="0"
-allow="autoplay; encrypted-media"
 allowfullscreen>
 </iframe>
-
-<script>
-
-const params = new URLSearchParams(window.location.search);
-const videoId = params.get("v");
-
-if (videoId) {
-  document.getElementById("player").src =
-  "https://www.youtube.com/embed/" + videoId;
-} else {
-  document.body.innerHTML = "No video ID";
-}
-
-</script>
 
 </body>
 </html>
