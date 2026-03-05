@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html>
 <body>
-<script src="https://www.youtube.com/iframe_api"></script>
+
 <div id="player"></div>
+<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 let player;
+let ready = false;
 
+// validacija video ID-a
 function isValidVideoId(id) {
   return /^[a-zA-Z0-9_-]{11}$/.test(id);
 }
 
 function onYouTubeIframeAPIReady() {
+  // prvo čitaj ?v= parametar
   const params = new URLSearchParams(location.search);
-  const id = params.get("v");
-
-  if (!isValidVideoId(id)) return;
+  let id = params.get("v");
+  if (!isValidVideoId(id)) id = ''; // fallback ako nije validno
 
   player = new YT.Player('player', {
     height: '0',
@@ -24,10 +27,27 @@ function onYouTubeIframeAPIReady() {
     playerVars: {
       autoplay: 1,
       controls: 0,
-      modestbranding: 1
+      modestbranding: 1,
+      mute: 1  // mute da autoplay radi pouzdano
+    },
+    events: {
+      onReady: () => { ready = true; }
     }
   });
 }
+
+// sluša poruke iz lokalnog HTML-a
+window.addEventListener("message", e => {
+  if (!player || !ready) return;
+  if (e.data.cmd === "play" && isValidVideoId(e.data.id)) {
+    player.loadVideoById(e.data.id);
+    if (e.data.unmute) player.unMute();
+  }
+  if (e.data.cmd === "pause") {
+    player.pauseVideo();
+  }
+});
 </script>
+
 </body>
 </html>
