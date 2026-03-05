@@ -2,38 +2,19 @@
 <html>
 <body>
 
-<div id="player"></div>
-
-<script src="https://www.youtube.com/iframe_api"></script>
+<iframe id="ytplayer"
+width="640"
+height="390"
+frameborder="0"
+allowfullscreen>
+</iframe>
 
 <script>
-let player;
+const params = new URLSearchParams(location.search);
+const id = params.get("v");
 
-function isValidVideoId(id) {
-  return /^[a-zA-Z0-9_-]{11}$/.test(id);
-}
-
-function getVideoId() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("v");
-}
-
-window.onYouTubeIframeAPIReady = function () {
-
-  const id = getVideoId();
-  if (!isValidVideoId(id)) return;
-
-  player = new YT.Player('player', {
-    height: '390',
-    width: '640',
-    videoId: id,
-    playerVars: {
-      controls: 1,
-      autoplay: 0
-    }
-  });
-
-};
+document.getElementById("ytplayer").src =
+"https://www.youtube.com/embed/" + id;
 </script>
 
 </body>
