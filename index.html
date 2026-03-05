@@ -1,16 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+<head>
+  <meta charset="utf-8">
+  <title>YouTube embed debug</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height:1.4; padding:16px; }
+    #debug { white-space:pre-wrap; background:#f7f7f7; padding:12px; border-radius:6px; }
+    iframe { border:1px solid #ddd; margin-top:12px; }
+    .bad { color:crimson; font-weight:700; }
+    .ok { color:green; font-weight:700; }
+  </style>
+</head>
 <body>
 
-<h3>YouTube embed test</h3>
+<h1>YouTube embed — debug</h1>
 
-<iframe
-width="640"
-height="360"
-src="https://www.youtube.com/embed/GuJQSAiODqI"
-frameborder="0"
-allowfullscreen>
-</iframe>
+<p id="summary">Pokrećem test...</p>
+
+<div id="debug"></div>
+
+<p><strong>Iframe preview:</strong></p>
+<iframe id="player" width="640" height="360" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+<noscript>
+  <p class="bad">JS je isključen — omogućite JavaScript da bi test radio.</p>
+</noscript>
+
+<script>
+(function(){
+  const out = (s) => {
+    const el = document.getElementById('debug');
+    el.innerText += s + "\n";
+    console.log(s);
+  };
+
+  // Global error catcher
+  window.onerror = function(msg, src, line, col, err) {
+    out("JS ERROR: " + msg + " at " + (src||"") + ":" + (line||"") + ":" + (col||""));
+    document.getElementById('summary').innerHTML = '<span class="bad">JS greška - vidi debug</span>';
+  };
+
+  try {
+    out("document.readyState: " + document.readyState);
+    out("location.href: " + location.href);
+    out("location.pathname: " + location.pathname);
+    out("location.search: " + location.search);
+
+    // Procitaj video ID iz ?v=...
+    const params = new URLSearchParams(window.location.search);
+    let id = params.get("v");
+    out("query param v = " + String(id));
+
+    // Ako nema u query, pokušaj path format /v=ID ili /ID
+    if (!id) {
+      const p = location.pathname;
+      out("tražim ID u pathname...");
+      let m = p.match(/v=([a-zA-Z0-9_-]{11})/);
+      if (!m) m = p.match(/\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+      if (m) {
+        id = m[1];
+        out("pronađen ID u path: " + id);
+      } else {
+        out("NIJE pronađen ID ni u query ni u path. (pokušavam fallback)");
+      }
+    }
+
+    // fallback demo video (samo za test)
+    const fallback = "dQw4w9WgXcQ";
+    if (!id) {
+      out("koristim fallback video id: " + fallback);
+      id = fallback;
+    }
+
+    // Validate simple
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
+      out("ID nevalidan: " + id);
+      document.getElementById('summary').innerHTML = '<span class="bad">Nevalidan video ID</span>';
+      return;
+    }
+
+    // Prikaži jasno status
+    document.getElementById('summary').innerHTML =
+      '<span class="ok">Pokušavam da ubacim video ID ' + id + '</span>';
+
+    // Postavi iframe src i dodaj event listener da vidiš da li se učitava
+    const iframe = document.getElementById('player');
+    const embedUrl = "https://www.youtube.com/embed/" + id + "?rel=0";
+    out("postavljam iframe.src = " + embedUrl);
+
+    // Postavi atribut i slušaj događaje
+    iframe.src = embedUrl;
+
+    // After setting src check if contentWindow exists (browsers block cross-origin access but contentWindow exists)
+    setTimeout(()=>{
+      try {
+        out("iframe.contentWindow: " + (iframe.contentWindow ? "exists" : "null"));
+      } catch(e) {
+        out("iframe.contentWindow access error (expected on cross-origin).");
+      }
+      out("Provjeri Network tab u DevTools za zahtjev prema: " + embedUrl);
+    }, 500);
+
+  } catch (e) {
+    out("EXCEPTION: " + e && e.stack ? e.stack : e);
+    document.getElementById('summary').innerHTML = '<span class="bad">Izuzetak — vidi debug</span>';
+  }
+
+})();
+</script>
 
 </body>
 </html>
