@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <body>
-<script src="https://www.youtube.com/iframe_api"></script>
+
 <div id="player"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 let player;
@@ -11,24 +13,30 @@ function isValidVideoId(id) {
   return /^[a-zA-Z0-9_-]{11}$/.test(id);
 }
 
-function onYouTubeIframeAPIReady() {
-  const params = new URLSearchParams(location.search);
-  const id = params.get("v");
+function getVideoId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("v");
+}
 
-  if (!isValidVideoId(id)) return;
+window.onYouTubeIframeAPIReady = function () {
+  const id = getVideoId();
+
+  if (!isValidVideoId(id)) {
+    console.log("Invalid ID:", id);
+    return;
+  }
 
   player = new YT.Player('player', {
-    height: '0',
-    width: '0',
+    height: '360',
+    width: '640',
     videoId: id,
     playerVars: {
       autoplay: 1,
-      controls: 0,
-      modestbranding: 1
+      controls: 1
     }
   });
-}
+};
 </script>
+
 </body>
 </html>
-
