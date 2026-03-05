@@ -14,18 +14,18 @@ async function find(){
  let q = document.getElementById("q").value;
 
  let url =
- "https://www.google.com/search?tbm=vid&q=" +
+ "https://www.google.com/search?udm=7&q=" +
  encodeURIComponent(q + " site:youtube.com");
 
  let r = await fetch(url);
  let text = await r.text();
 
- let m = text.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
+ let m = text.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/);
 
  if(m){
    document.getElementById("out").textContent =
    "https://youtu.be/" + m[1];
- }else{
+ } else {
    document.getElementById("out").textContent =
    "no video found";
  }
