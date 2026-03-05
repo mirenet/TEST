@@ -2,19 +2,26 @@
 <html>
 <body>
 
-<iframe id="ytplayer"
+<iframe id="player"
 width="640"
-height="390"
+height="360"
 frameborder="0"
+allow="autoplay; encrypted-media"
 allowfullscreen>
 </iframe>
 
 <script>
-const params = new URLSearchParams(location.search);
-const id = params.get("v");
 
-document.getElementById("ytplayer").src =
-"https://www.youtube.com/embed/" + id;
+const params = new URLSearchParams(window.location.search);
+const videoId = params.get("v");
+
+if (videoId) {
+  document.getElementById("player").src =
+  "https://www.youtube.com/embed/" + videoId;
+} else {
+  document.body.innerHTML = "No video ID";
+}
+
 </script>
 
 </body>
