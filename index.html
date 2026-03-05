@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
-<title>YouTube search embed test</title>
-</head>
-
 <body>
 
-<h3>YouTube search embed</h3>
+<input id="q" value="madonna vogue">
+<button onclick="find()">Find</button>
 
-<iframe
-width="640"
-height="360"
-src="https://www.youtube.com/embed?listType=search&list=madonna%20vogue&autoplay=1"
-frameborder="0"
-allow="autoplay; encrypted-media"
-allowfullscreen>
-</iframe>
+<pre id="out"></pre>
+
+<script>
+
+async function find(){
+
+ let q = document.getElementById("q").value;
+
+ let url =
+ "https://www.google.com/search?tbm=vid&q=" +
+ encodeURIComponent(q + " site:youtube.com");
+
+ let r = await fetch(url);
+ let text = await r.text();
+
+ let m = text.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
+
+ if(m){
+   document.getElementById("out").textContent =
+   "https://youtu.be/" + m[1];
+ }else{
+   document.getElementById("out").textContent =
+   "no video found";
+ }
+
+}
+
+</script>
 
 </body>
 </html>
