@@ -30,16 +30,16 @@ background:#000;
 box-shadow:0 0 25px rgba(0,0,0,.6);
 }
 
-.circle iframe{
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
+.circle iframe {
+  width: 640px;   /* početna širina */
+  height: 360px;  /* početna visina */
+  border: 0;
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%,-50%) scale(1);
+  transform: translate(-50%, -50%);
   transform-origin: center;
+  zoom: 1; /* početni zoom */
 }
 
 .controls{
@@ -1094,16 +1094,9 @@ playlist.appendChild(div);
 });
 
 function setZoom(v){
-  const iframe = player.getIframe();
-  // Fit to circle: najpre smesti iframe tako da video stane ceo u krug
-  // Original dimenzije YouTube: 16:9
-  const circleSize = 300;
-  const videoW = 16;
-  const videoH = 9;
-  const scaleFit = Math.min(circleSize / (videoW*20), circleSize / (videoH*20)); 
-  iframe.style.transform = "translate(-50%,-50%) scale(" + (v*scaleFit) + ")";
-  slider.value=v;
-  input.value=v;
+  player.style.zoom = v;      // pravi "browser zoom"
+  slider.value = v;
+  input.value = v;
 }
   
 </script>
