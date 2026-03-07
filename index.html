@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Skip Button Test</title>
-
+<title>YouTube Skip Button Overlay Test</title>
 <style>
 body{
   margin:0;
@@ -15,7 +14,6 @@ body{
   flex-direction:column;
   align-items:center;
 }
-
 h3{margin-top:20px;}
 
 .circle{
@@ -27,7 +25,6 @@ h3{margin-top:20px;}
   margin-top:50px;
   background:#000;
   box-shadow:0 0 25px rgba(0,0,0,.6);
-  touch-action: manipulation;
 }
 
 /* video */
@@ -43,6 +40,29 @@ h3{margin-top:20px;}
   transition: transform 0.3s ease;
 }
 
+/* overlay */
+#overlay{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:100;
+  background:transparent;
+}
+
+/* skip marker */
+#skipMarker{
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:red;
+  position:absolute;
+  display:none;
+  z-index:200;
+  touch-action: none;
+}
+
 /* controls */
 .controls{
   margin-top:30px;
@@ -50,11 +70,9 @@ h3{margin-top:20px;}
   max-width:400px;
   text-align:center;
 }
-
 .controls input[type="range"]{
   width:100%;
 }
-
 .controls input[type="number"]{
   width:80px;
   margin-top:10px;
@@ -70,7 +88,6 @@ h3{margin-top:20px;}
   grid-template-columns:repeat(3,1fr);
   gap:8px;
 }
-
 .video-btn{
   padding:8px;
   background:#222;
@@ -79,7 +96,6 @@ h3{margin-top:20px;}
   text-align:center;
   cursor:pointer;
 }
-
 .video-btn:active{
   background:#333;
 }
@@ -87,18 +103,17 @@ h3{margin-top:20px;}
 /* long press menu */
 #menu{
   position:absolute;
-  top:100px;
+  top:50%;
   left:50%;
-  transform:translateX(-50%);
+  transform:translate(-50%, -50%);
   background:#222;
   border:1px solid #555;
   padding:10px;
   display:none;
   flex-direction:column;
   gap:8px;
-  z-index:1000;
+  z-index:300;
 }
-
 .menu-btn{
   background:#333;
   padding:8px;
@@ -108,27 +123,15 @@ h3{margin-top:20px;}
 .menu-btn:active{
   background:#444;
 }
-
-/* skip marker */
-#skipMarker{
-  width:20px;
-  height:20px;
-  border-radius:50%;
-  background:red;
-  position:absolute;
-  display:none;
-  z-index:500;
-  touch-action: none;
-}
-
 </style>
 </head>
 <body>
 
-<h3>YouTube Skip Button Test</h3>
+<h3>YouTube Skip Button Overlay Test</h3>
 
 <div class="circle" id="circle">
-  <iframe id="player" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+  <iframe id="player" src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1" allowfullscreen></iframe>
+  <div id="overlay"></div>
   <div id="skipMarker"></div>
 </div>
 
@@ -149,35 +152,24 @@ h3{margin-top:20px;}
 </div>
 
 <script>
-// lista videa
+// ---- lista videa ----
 const videos = [
-"dQw4w9WgXcQ",
-"9bZkp7q19f0",
-"3JZ_D3ELwOQ",
-"kJQP7kiw5Fk",
-"RgKAFK5djSk",
-"OPf0YbXqDm0",
-"JGwWNGJdvx8",
-"60ItHLz5WEA",
-"CevxZvSJLk8",
-"fRh_vgS2dFE",
-"lp-EO5I60KA",
-"KQ6zr6kCPj8",
-"pRpeEdMmmQ0",
-"hT_nvWreIhg",
-"YQHsXMglC9A"
+"dQw4w9WgXcQ","9bZkp7q19f0","3JZ_D3ELwOQ","kJQP7kiw5Fk",
+"RgKAFK5djSk","OPf0YbXqDm0","JGwWNGJdvx8","60ItHLz5WEA",
+"CevxZvSJLk8","fRh_vgS2dFE","lp-EO5I60KA","KQ6zr6kCPj8",
+"pRpeEdMmmQ0","hT_nvWreIhg","YQHsXMglC9A"
 ];
-
 const player = document.getElementById("player");
 const playlist = document.getElementById("playlist");
 const slider = document.getElementById("zoomSlider");
 const input = document.getElementById("zoomInput");
+const overlay = document.getElementById("overlay");
 const circle = document.getElementById("circle");
 const menu = document.getElementById("menu");
 const skipMarker = document.getElementById("skipMarker");
 
-let skipPos = {x:0, y:0}; // memorija trenutne sesije
-let editMode = null; // 'zoom' | 'skip'
+let skipPos = {x:150,y:150}; // centar po default
+let editMode = null;
 let videoNormalScale = 1.15;
 let skipScale = 0.4;
 
@@ -186,7 +178,7 @@ videos.forEach(id=>{
   const btn=document.createElement("div");
   btn.className="video-btn";
   btn.innerText=id;
-  btn.onclick=()=>{player.src="https://www.youtube.com/embed/"+id;};
+  btn.onclick=()=>{player.src="https://www.youtube.com/embed/"+id+"?enablejsapi=1";};
   playlist.appendChild(btn);
 });
 
@@ -197,16 +189,19 @@ function setZoom(v){
   slider.value = v;
   input.value = v;
 }
-
 slider.oninput = ()=>{ setZoom(slider.value); };
 input.oninput = ()=>{ setZoom(input.value); };
 
 // ---- Long press menu ----
 let pressTimer = null;
-circle.addEventListener("touchstart", e=>{
-  pressTimer = setTimeout(()=>{ menu.style.display="flex"; }, 500);
+overlay.addEventListener("touchstart", e=>{
+  pressTimer = setTimeout(()=>{
+    // pauziraj video
+    player.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    menu.style.display="flex";
+  }, 500);
 });
-circle.addEventListener("touchend", e=>{
+overlay.addEventListener("touchend", e=>{
   clearTimeout(pressTimer);
 });
 
@@ -219,6 +214,8 @@ document.getElementById("menuZoom").onclick = ()=>{
 document.getElementById("menuSkip").onclick = ()=>{
   editMode='skip';
   skipMarker.style.display='block';
+  skipMarker.style.left = skipPos.x-10+"px";
+  skipMarker.style.top = skipPos.y-10+"px";
   menu.style.display='none';
 };
 document.getElementById("menuClose").onclick = ()=>{
@@ -245,30 +242,29 @@ skipMarker.addEventListener("touchmove", e=>{
   skipMarker.style.top = y + "px";
 });
 skipMarker.addEventListener("touchend", e=>{
-  // save u RAM
   const rect = circle.getBoundingClientRect();
-  skipPos.x = skipMarker.offsetLeft - rect.left + 10; // centar marker
+  skipPos.x = skipMarker.offsetLeft - rect.left + 10;
   skipPos.y = skipMarker.offsetTop - rect.top + 10;
 });
 
 // ---- Tap / Double tap ----
 let lastTap = 0;
-circle.addEventListener("touchend", e=>{
+overlay.addEventListener("touchend", e=>{
   const now = Date.now();
   if(now - lastTap < 300){
     // double tap
+    const rect = circle.getBoundingClientRect();
+    let dx = rect.width/2 - skipPos.x;
+    let dy = rect.height/2 - skipPos.y;
     if(player.style.transform.includes(skipScale)){
       // vrati normal zoom
       player.style.transform = `translate(-50%,-50%) scale(${videoNormalScale})`;
     } else {
       // zumiraj skip dugme
-      const rect = circle.getBoundingClientRect();
-      let dx = rect.width/2 - skipPos.x;
-      let dy = rect.height/2 - skipPos.y;
       player.style.transform = `translate(${dx}px, ${dy}px) scale(${skipScale})`;
     }
   } else {
-    // single tap -> artist image (vrati normal zoom)
+    // single tap -> normal zoom
     player.style.transform = `translate(-50%,-50%) scale(${videoNormalScale})`;
   }
   lastTap = now;
