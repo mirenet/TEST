@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Circle Zoom Player</title>
+<title>YouTube Circle Player with Popout</title>
 <style>
 body{
   margin:0;
@@ -13,6 +13,10 @@ body{
   display:flex;
   flex-direction:column;
   align-items:center;
+}
+
+h3{
+  margin-top:20px;
 }
 
 /* krug */
@@ -37,28 +41,26 @@ body{
   left:50%;
   transform:translate(-50%,-50%) scale(1);
   transform-origin:center;
-  transition: transform 0.3s;
-  z-index:1;
-}
-
-/* dugme za pop-out */
-#popOutBtn {
-  position: absolute;
-  top:5px;
-  right:5px;
-  width:30px;
-  height:30px;
-  background:#222;
-  color:white;
-  text-align:center;
-  line-height:30px;
+  transition: transform 0.3s ease;
   cursor:pointer;
-  border-radius:4px;
-  z-index:10;
-  font-weight:bold;
 }
 
-/* kontrole */
+/* overlay dugme na videu */
+.popout-btn{
+  position:absolute;
+  bottom:10px;
+  right:10px;
+  z-index:10;
+  padding:6px 10px;
+  background:#222;
+  border:1px solid #555;
+  color:white;
+  cursor:pointer;
+  font-size:14px;
+  border-radius:4px;
+}
+
+/* kontrola zoom */
 .controls{
   margin-top:30px;
   width:90%;
@@ -96,15 +98,11 @@ body{
 </head>
 <body>
 
-<h3>YouTube Circle Zoom Player</h3>
+<h3>YouTube Circle Player</h3>
 
-<div class="circle" id="circle">
-  <iframe
-    id="player"
-    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-    allowfullscreen>
-  </iframe>
-  <div id="popOutBtn">→</div>
+<div class="circle">
+  <iframe id="player" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+  <button class="popout-btn" id="popoutBtn">⤢</button>
 </div>
 
 <div class="controls">
@@ -115,69 +113,73 @@ body{
 <div class="playlist" id="playlist"></div>
 
 <script>
-// playlist videa
 const videos = [
-"dQw4w9WgXcQ",
-"9bZkp7q19f0",
-"3JZ_D3ELwOQ",
-"kJQP7kiw5Fk",
-"RgKAFK5djSk",
-"OPf0YbXqDm0",
-"JGwWNGJdvx8",
-"60ItHLz5WEA",
-"CevxZvSJLk8",
-"fRh_vgS2dFE",
-"lp-EO5I60KA",
-"KQ6zr6kCPj8",
-"pRpeEdMmmQ0",
-"hT_nvWreIhg",
-"YQHsXMglC9A"
+  "dQw4w9WgXcQ",
+  "9bZkp7q19f0",
+  "3JZ_D3ELwOQ",
+  "kJQP7kiw5Fk",
+  "RgKAFK5djSk",
+  "OPf0YbXqDm0",
+  "JGwWNGJdvx8",
+  "60ItHLz5WEA",
+  "CevxZvSJLk8",
+  "fRh_vgS2dFE",
+  "lp-EO5I60KA",
+  "KQ6zr6kCPj8",
+  "pRpeEdMmmQ0",
+  "hT_nvWreIhg",
+  "YQHsXMglC9A"
 ];
 
 const player = document.getElementById("player");
 const slider = document.getElementById("zoomSlider");
-const circle = document.getElementById("circle");
-const popOutBtn = document.getElementById("popOutBtn");
+const popoutBtn = document.getElementById("popoutBtn");
+let popout = false;
+let normalScale = 1;
+let popoutScale = 1.8; // koliko da se "iskoci"
 
-let poppedOut = false;
+function setZoom(scale){
+  player.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  slider.value = scale;
+}
 
-// zoom
+// slider kontrola zoom
 slider.oninput = () => {
-  const scale = slider.value;
-  player.style.transform = `translate(-50%,-50%) scale(${scale})`;
+  if(!popout) normalScale = slider.value;
+  setZoom(popout ? popoutScale : normalScale);
 };
 
-// playlist dugmad
+// dugme za popout
+popoutBtn.onclick = (e) => {
+  e.stopPropagation(); // da klik ne ide na body
+  popout = !popout;
+  setZoom(popout ? popoutScale : normalScale);
+};
+
+// klik van videa vraca nazad u krug
+document.body.onclick = (e) => {
+  if(popout){
+    // proveri da li je klik unutar circle
+    const circle = document.querySelector('.circle');
+    if(!circle.contains(e.target)){
+      popout = false;
+      setZoom(normalScale);
+    }
+  }
+};
+
+// playlist
 const playlistDiv = document.getElementById("playlist");
 videos.forEach(id => {
   const btn = document.createElement("div");
   btn.className = "video-btn";
   btn.innerText = id;
   btn.onclick = () => {
-    player.src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+    player.src = "https://www.youtube.com/embed/" + id;
   };
   playlistDiv.appendChild(btn);
 });
 
-// pop-out dugme
-popOutBtn.onclick = (e) => {
-  e.stopPropagation(); // ne propagira klik van videa
-  if(!poppedOut){
-    player.style.transform = `translate(-50%,-50%) scale(1.5)`;
-    player.style.zIndex = 20;
-    poppedOut = true;
-  }
-};
-
-// klik van videa vraća nazad
-document.body.addEventListener('click', (e) => {
-  if(poppedOut && !circle.contains(e.target)){
-    player.style.transform = `translate(-50%,-50%) scale(${slider.value})`;
-    player.style.zIndex = 1;
-    poppedOut = false;
-  }
-});
 </script>
-
 </body>
 </html>
