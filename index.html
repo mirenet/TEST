@@ -61,11 +61,6 @@ text-align:center;
 width:100%;
 }
 
-.controls input{
-margin-top:10px;
-font-size:16px;
-}
-
 .playlist{
 margin-top:30px;
 width:95%;
@@ -109,33 +104,15 @@ allowfullscreen>
 
 <div class="controls">
 
-<p>Zoom video</p>
+<p>Zoom</p>
 
 <input
 type="range"
 id="zoomSlider"
-min="0.3"
+min="0.5"
 max="2"
 step="0.05"
 value="1">
-
-<br>
-
-<input
-type="number"
-id="zoomInput"
-step="0.05"
-value="1">
-
-<br><br>
-
-<p>Skip button position</p>
-
-X:
-<input type="number" id="skipX" value="150">
-
-Y:
-<input type="number" id="skipY" value="150">
 
 </div>
 
@@ -145,19 +122,18 @@ Y:
 
 const player=document.getElementById("player")
 const overlay=document.getElementById("overlay")
-
 const slider=document.getElementById("zoomSlider")
-const input=document.getElementById("zoomInput")
-
-const skipX=document.getElementById("skipX")
-const skipY=document.getElementById("skipY")
 
 let zoom=1
 let posX=0
 let posY=0
 
-let tapTime=0
-let tapCount=0
+let clickTimer=null
+let lastEvent=null
+
+let skipPos=null
+
+
 
 function updateTransform(){
 
@@ -166,80 +142,74 @@ player.style.transform=
 
 }
 
-function setZoom(v){
 
-zoom=parseFloat(v)
 
-slider.value=zoom
-input.value=zoom
+slider.oninput=()=>{
+
+zoom=parseFloat(slider.value)
 
 updateTransform()
 
 }
 
-slider.oninput=()=>setZoom(slider.value)
-input.oninput=()=>setZoom(input.value)
 
 
+overlay.addEventListener("click",(e)=>{
 
-overlay.addEventListener("click",()=>{
+if(clickTimer){
 
-const now=Date.now()
+// DOUBLE CLICK
 
-if(now-tapTime<300){
+clearTimeout(clickTimer)
+clickTimer=null
 
-tapCount++
+if(skipPos){
 
-}else{
-
-tapCount=1
-
-}
-
-tapTime=now
-
-
-
-if(tapCount===2){
-
-// double tap -> zoom skip dugme
-
-posX=parseInt(skipX.value)||0
-posY=parseInt(skipY.value)||0
-
+posX=skipPos.x
+posY=skipPos.y
 zoom=2
 
 updateTransform()
 
 }
 
+}else{
+
+lastEvent=e
+
+clickTimer=setTimeout(()=>{
+
+// SINGLE CLICK → prosledi videu
+
+overlay.style.pointerEvents="none"
+
+const el=document.elementFromPoint(
+lastEvent.clientX,
+lastEvent.clientY
+)
+
+if(el) el.click()
 
 
-if(tapCount===3){
 
-// triple tap -> reset
+// zapamti skip poziciju prvi put
 
-posX=0
-posY=0
-zoom=1
+const rect=overlay.getBoundingClientRect()
 
-updateTransform()
-
-tapCount=0
-
+skipPos={
+x:lastEvent.clientX-rect.left-150,
+y:lastEvent.clientY-rect.top-150
 }
 
 
 
-// pusti klik videu
-
-overlay.style.pointerEvents="none"
-
-setTimeout(()=>{
-
 overlay.style.pointerEvents="auto"
 
-},350)
+clickTimer=null
+
+},250)
+
+}
 
 })
 
