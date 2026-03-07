@@ -1,104 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Circle Zoom Test</title>
-<style>
-  body {
-    margin: 0;
-    background: #111;
-    color: white;
-    font-family: Arial;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Circle Zoom Test</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: Arial;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-  .circle {
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    overflow: hidden;
-    position: relative;
-    margin-top: 50px;
-    background: #000;
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
-  }
+    .circle {
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      overflow: hidden;
+      position: relative;
+      margin-top: 50px;
+      background: #000;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
+    }
 
-  .circle iframe {
-    width: 640px;
-    height: 360px;
-    border: 0;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(1);
-    transform-origin: center;
-    transition: transform 0.3s ease;
-  }
+    .circle iframe {
+      width: 640px;
+      height: 360px;
+      border: 0;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1.15);
+      transform-origin: center;
+      transition: transform 0.3s ease;
+    }
 
-  #overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    z-index: 200;
-    touch-action: none; /* Disable pinch and scroll behavior */
-  }
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      z-index: 200;
+      touch-action: none; /* Disable pinch and scroll behavior */
+    }
 
-  #skipMarker {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: red;
-    position: absolute;
-    display: none;
-    z-index: 300;
-    touch-action: none;
-  }
+    #skipMarker {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: red;
+      position: absolute;
+      display: none;
+      z-index: 300;
+      touch-action: none;
+    }
 
-  .controls {
-    margin-top: 30px;
-    width: 90%;
-    max-width: 400px;
-    text-align: center;
-  }
+    .controls {
+      margin-top: 30px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
 
-  .controls input[type="range"] {
-    width: 100%;
-  }
+    .controls input[type="range"] {
+      width: 100%;
+    }
 
-  .controls input[type="number"] {
-    width: 80px;
-    margin-top: 10px;
-    font-size: 16px;
-  }
+    .controls input[type="number"] {
+      width: 80px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
 
-  .playlist {
-    margin-top: 30px;
-    width: 95%;
-    max-width: 500px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
+    .playlist {
+      margin-top: 30px;
+      width: 95%;
+      max-width: 500px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
 
-  .video-btn {
-    padding: 8px;
-    background: #222;
-    border: 1px solid #444;
-    font-size: 12px;
-    text-align: center;
-    cursor: pointer;
-  }
+    .video-btn {
+      padding: 8px;
+      background: #222;
+      border: 1px solid #444;
+      font-size: 12px;
+      text-align: center;
+      cursor: pointer;
+    }
 
-  .video-btn:active {
-    background: #333;
-  }
-</style>
+    .video-btn:active {
+      background: #333;
+    }
+  </style>
 </head>
 <body>
 
@@ -112,14 +112,22 @@
 
 <div class="controls">
   <p>Zoom video</p>
-  <input type="range" id="zoomSlider" min="0.3" max="1.5" step="0.05" value="1">
+  <input type="range" id="zoomSlider" min="0.3" max="1.5" step="0.05" value="1.15">
   <br><br>
-  <input type="number" id="zoomInput" step="0.05" value="1">
+  <input type="number" id="zoomInput" step="0.05" value="1.15">
 </div>
 
 <div class="playlist" id="playlist"></div>
 
 <script>
+// lista 15 muzičkih videa
+const videos = [
+  "dQw4w9WgXcQ", "9bZkp7q19f0", "3JZ_D3ELwOQ", "kJQP7kiw5Fk",
+  "RgKAFK5djSk", "OPf0YbXqDm0", "JGwWNGJdvx8", "60ItHLz5WEA",
+  "CevxZvSJLk8", "fRh_vgS2dFE", "lp-EO5I60KA", "KQ6zr6kCPj8",
+  "pRpeEdMmmQ0", "hT_nvWreIhg", "YQHsXMglC9A"
+];
+
 const player = document.getElementById("player");
 const slider = document.getElementById("zoomSlider");
 const input = document.getElementById("zoomInput");
@@ -127,7 +135,7 @@ const overlay = document.getElementById("overlay");
 const skipMarker = document.getElementById("skipMarker");
 
 let skipPos = { x: 150, y: 150 }; // Default position for skip button
-let videoNormalScale = 1;
+let videoNormalScale = 1.15;
 let zoomed = false;
 
 let lastTap = 0;
@@ -150,13 +158,6 @@ input.oninput = () => {
 };
 
 // Playlist
-const videos = [
-  "dQw4w9WgXcQ", "9bZkp7q19f0", "3JZ_D3ELwOQ", "kJQP7kiw5Fk",
-  "RgKAFK5djSk", "OPf0YbXqDm0", "JGwWNGJdvx8", "60ItHLz5WEA",
-  "CevxZvSJLk8", "fRh_vgS2dFE", "lp-EO5I60KA", "KQ6zr6kCPj8",
-  "pRpeEdMmmQ0", "hT_nvWreIhg", "YQHsXMglC9A"
-];
-
 const playlist = document.getElementById("playlist");
 videos.forEach(id => {
   const btn = document.createElement("div");
@@ -171,7 +172,6 @@ videos.forEach(id => {
 // Touch Event for Single Tap, Drag, Pinch Zoom
 overlay.addEventListener("touchstart", e => {
   if (e.touches.length === 1) {
-    // Start dragging or detecting a single touch
     lastTouch.x = e.touches[0].clientX;
     lastTouch.y = e.touches[0].clientY;
   }
@@ -180,7 +180,6 @@ overlay.addEventListener("touchstart", e => {
 // Touch Move for Pinch and Drag
 overlay.addEventListener("touchmove", e => {
   if (e.touches.length === 2) {
-    // Pinch to zoom
     const dist = Math.hypot(
       e.touches[1].clientX - e.touches[0].clientX,
       e.touches[1].clientY - e.touches[0].clientY
@@ -189,14 +188,18 @@ overlay.addEventListener("touchmove", e => {
     player.style.transform = `translate(-50%, -50%) scale(${scale})`;
     zoomed = true;
   } else if (e.touches.length === 1) {
-    // Drag for skip button position
     const deltaX = e.touches[0].clientX - lastTouch.x;
     const deltaY = e.touches[0].clientY - lastTouch.y;
 
-    skipPos.x += deltaX;
-    skipPos.y += deltaY;
-    skipMarker.style.left = `${skipPos.x}px`;
-    skipMarker.style.top = `${skipPos.y}px`;
+    if (zoomed) {
+      player.style.transform = `translate(-50%, -50%) scale(${videoNormalScale})`;  // Reset zoom if moved
+    } else {
+      // Drag to move skip button position
+      skipPos.x += deltaX;
+      skipPos.y += deltaY;
+      skipMarker.style.left = `${skipPos.x}px`;
+      skipMarker.style.top = `${skipPos.y}px`;
+    }
 
     lastTouch.x = e.touches[0].clientX;
     lastTouch.y = e.touches[0].clientY;
