@@ -1,260 +1,208 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>YouTube Circle Zoom Test</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>YouTube Circle Zoom — calibrate & double-click</title>
 <style>
-
-body{
-margin:0;
-background:#111;
-color:white;
-font-family:Arial;
-display:flex;
-flex-direction:column;
-align-items:center;
-}
-
-.circle{
-width:300px;
-height:300px;
-border-radius:50%;
-overflow:hidden;
-position:relative;
-margin-top:50px;
-background:#000;
-box-shadow:0 0 25px rgba(0,0,0,.6);
-}
-
-.circle iframe{
-width:640px;
-height:360px;
-border:0;
-position:absolute;
-top:50%;
-left:50%;
-transform-origin:center;
-}
-
-.overlay{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:transparent;
-cursor:pointer;
-}
-
-.controls{
-margin-top:30px;
-width:90%;
-max-width:400px;
-text-align:center;
-}
-
-.controls input[type="range"]{
-width:100%;
-}
-
-.playlist{
-margin-top:30px;
-width:95%;
-max-width:500px;
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:8px;
-}
-
-.video-btn{
-padding:8px;
-background:#222;
-border:1px solid #444;
-font-size:12px;
-text-align:center;
-cursor:pointer;
-}
-
-.video-btn:active{
-background:#333;
-}
-
+  body{margin:0;background:#111;color:#fff;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px;}
+  h3{margin:6px 0 14px;}
+  .circle{width:300px;height:300px;border-radius:50%;overflow:hidden;position:relative;background:#000;box-shadow:0 0 25px rgba(0,0,0,.6);}
+  .circle iframe{width:640px;height:360px;border:0;position:absolute;top:50%;left:50%;transform-origin:center;will-change:transform;transition:transform 240ms cubic-bezier(.2,.9,.2,1);}
+  /* overlay iznad videa koji hvata sve klikove */
+  .overlay{position:absolute;inset:0;background:transparent;cursor:pointer;display:block;}
+  /* marker za zapamcenu skip pozicije */
+  .marker{position:absolute;width:14px;height:14px;border-radius:50%;background:rgba(255,0,0,0.9);transform:translate(-50%,-50%);pointer-events:none;border:2px solid white;box-shadow:0 0 6px rgba(0,0,0,.7);}
+  .controls{margin-top:18px;width:95%;max-width:520px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .controls input[type="range"]{width:180px;}
+  .controls .btn{background:#222;border:1px solid #444;color:#fff;padding:8px 10px;border-radius:6px;cursor:pointer;}
+  .controls .btn.active{background:#0a84ff;}
+  .note{opacity:.8;font-size:13px;}
 </style>
 </head>
-
 <body>
 
-<h3>YouTube Circle Zoom Test</h3>
+<h3>YouTube Circle Zoom — calibrate & double-click</h3>
 
-<div class="circle">
+<div class="circle" id="circle">
+  <!-- YouTube iframe: enablejsapi=1 da možemo kontrolisati player -->
+  <iframe id="player" src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1" allowfullscreen></iframe>
 
-<iframe
-id="player"
-src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-allowfullscreen>
-</iframe>
+  <!-- overlay koji hvata klikove -->
+  <div id="overlay" class="overlay" aria-hidden="true"></div>
 
-<div id="overlay" class="overlay"></div>
-
+  <!-- marker za zapamcenu skip pozicije (sakriven dok nije saved) -->
+  <div id="marker" class="marker" style="display:none;"></div>
 </div>
 
 <div class="controls">
-
-<p>Zoom</p>
-
-<input
-type="range"
-id="zoomSlider"
-min="0.5"
-max="2"
-step="0.05"
-value="1">
-
+  <label class="note">Zoom:</label>
+  <input id="zoomRange" type="range" min="0.6" max="2.4" step="0.05" value="1">
+  <button id="calibrateBtn" class="btn">Calibrate skip</button>
+  <button id="gotoBtn" class="btn">Go to saved</button>
+  <div class="note" id="status">Single click = play/pause · Double click = jump to saved</div>
 </div>
 
-<div class="playlist" id="playlist"></div>
-
 <script>
+/*
+  Napomena:
+  - Single klik: kontrola play/pause preko YouTube IFrame API (trusted)
+  - Double klik: ako postoji zapamcena pozicija -> pomeri i zoomuj video tako da ta tačka dodje u centar
+  - Calibrate mode: klik na "Calibrate skip", pa klik preko overlay-a na mestu skip dugmeta na videu.
+*/
 
-const player=document.getElementById("player")
-const overlay=document.getElementById("overlay")
-const slider=document.getElementById("zoomSlider")
+let player;                 // YT player objekt (postaviće onYouTubeIframeAPIReady)
+let playerReady = false;
 
-let zoom=1
-let posX=0
-let posY=0
+const iframe = document.getElementById('player');
+const overlay = document.getElementById('overlay');
+const marker = document.getElementById('marker');
+const circle = document.getElementById('circle');
 
-let clickTimer=null
-let lastEvent=null
+const zoomRange = document.getElementById('zoomRange');
+const calibrateBtn = document.getElementById('calibrateBtn');
+const gotoBtn = document.getElementById('gotoBtn');
+const status = document.getElementById('status');
 
-let skipPos=null
+let zoom = parseFloat(zoomRange.value);
+let posX = 0, posY = 0;      // transform translate vrednosti
+let clickTimer = null;
+let lastEvent = null;
+let calibrating = false;
+let saved = null;            // {dx, dy} — offset od centra kruga u px (pozicija u lokalnim koordinatama)
 
-
-
-function updateTransform(){
-
-player.style.transform=
-`translate(-50%,-50%) translate(${posX}px,${posY}px) scale(${zoom})`
-
+/* ---------- YouTube IFrame API setup ---------- */
+function onYouTubeIframeAPIReady(){
+  player = new YT.Player('player', {
+    events: {
+      'onReady': () => { playerReady = true; },
+    },
+    playerVars: { 'playsinline': 1 }
+  });
 }
 
+// ubacimo API skriptu
+(function loadYT(){
+  const s = document.createElement('script');
+  s.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(s);
+})();
 
-
-slider.oninput=()=>{
-
-zoom=parseFloat(slider.value)
-
-updateTransform()
-
+/* ---------- transform helper ---------- */
+function applyTransform(){
+  iframe.style.transform = `translate(-50%,-50%) translate(${posX}px,${posY}px) scale(${zoom})`;
 }
 
+/* ---------- zoom kontrola ---------- */
+zoomRange.addEventListener('input', (e) => {
+  zoom = parseFloat(e.target.value);
+  applyTransform();
+});
 
+/* ---------- calibrate button ---------- */
+calibrateBtn.addEventListener('click', () => {
+  calibrating = !calibrating;
+  calibrateBtn.classList.toggle('active', calibrating);
+  calibrateBtn.innerText = calibrating ? 'Click on video to save' : 'Calibrate skip';
+  status.innerText = calibrating ? 'Click overlay where Skip button is visible.' : 'Single click = play/pause · Double click = jump to saved';
+});
 
-overlay.addEventListener("click",(e)=>{
+/* ---------- goto button (manual test) ---------- */
+gotoBtn.addEventListener('click', () => {
+  if(!saved){ alert('Nema sacuvane pozicije. Klikni Calibrate pa klikni na skip dugme.'); return; }
+  jumpToSaved();
+});
 
-if(clickTimer){
-
-// DOUBLE CLICK
-
-clearTimeout(clickTimer)
-clickTimer=null
-
-if(skipPos){
-
-posX=skipPos.x
-posY=skipPos.y
-zoom=2
-
-updateTransform()
-
+/* ---------- save marker position in DOM ---------- */
+function showMarkerForSaved(){
+  if(!saved){ marker.style.display = 'none'; return; }
+  marker.style.display = 'block';
+  // marker pozicionujemo unutar kruga: center + saved.dx, saved.dy
+  const rect = circle.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  marker.style.left = (cx + saved.dx) - rect.left + 'px';
+  marker.style.top  = (cy + saved.dy) - rect.top + 'px';
 }
 
-}else{
-
-lastEvent=e
-
-clickTimer=setTimeout(()=>{
-
-// SINGLE CLICK → prosledi videu
-
-overlay.style.pointerEvents="none"
-
-const el=document.elementFromPoint(
-lastEvent.clientX,
-lastEvent.clientY
-)
-
-if(el) el.click()
-
-
-
-// zapamti skip poziciju prvi put
-
-const rect=overlay.getBoundingClientRect()
-
-skipPos={
-x:lastEvent.clientX-rect.left-150,
-y:lastEvent.clientY-rect.top-150
+/* ---------- function to jump to saved pos ---------- */
+function jumpToSaved(){
+  if(!saved) return;
+  // Da bi tačka došla u centar kruga, pomeramo video za -saved.dx, -saved.dy
+  posX = -saved.dx;
+  posY = -saved.dy;
+  // podesimo zoom na pristojnu vrednost
+  zoom = Math.max(1.2, Math.min(2.4, parseFloat(zoomRange.value) || 1.8));
+  zoomRange.value = zoom;
+  applyTransform();
+  // kratko prikaz poruke
+  status.innerText = 'Jumped to saved position';
+  setTimeout(()=> status.innerText = 'Single click = play/pause · Double click = jump to saved', 1200);
 }
 
+/* ---------- overlay click logic: single vs double ---------- */
+overlay.addEventListener('click', (e) => {
 
+  // Ako smo u calibrate modu, prvi single klik treba da zapamti koordinatu
+  if (calibrating) {
+    // izracunamo pomeraj u odnosu na centar kruga
+    const rect = circle.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    saved = { dx: Math.round(dx), dy: Math.round(dy) };
+    calibrating = false;
+    calibrateBtn.classList.remove('active');
+    calibrateBtn.innerText = 'Calibrate skip';
+    status.innerText = 'Saved skip position';
+    showMarkerForSaved();
+    setTimeout(()=> status.innerText = 'Single click = play/pause · Double click = jump to saved', 1200);
+    return;
+  }
 
-overlay.style.pointerEvents="auto"
+  // double click detection (classic: if timer exists then treat as double)
+  if (clickTimer) {
+    // double click
+    clearTimeout(clickTimer);
+    clickTimer = null;
 
-clickTimer=null
+    // ACTION for double click: jump to saved position if present
+    if(saved){
+      jumpToSaved();
+    } else {
+      status.innerText = 'No saved position — press Calibrate and click on skip button to save.';
+      setTimeout(()=> status.innerText = 'Single click = play/pause · Double click = jump to saved', 1500);
+    }
 
-},250)
+    return;
+  }
 
-}
+  // otherwise start single click timer (if no second click in 260ms => single click)
+  lastEvent = e;
+  clickTimer = setTimeout(() => {
+    clickTimer = null;
+    // SINGLE click action: toggle play/pause via YT API (trusted gesture)
+    if (playerReady && player && typeof player.getPlayerState === 'function') {
+      const state = player.getPlayerState();
+      // states: 1 = playing, 2 = paused, 0 = ended
+      if (state === 1) { player.pauseVideo(); }
+      else { player.playVideo(); }
+    } else {
+      // fallback: if API nije ready, jednostavno fokusiraj iframe (kad korisnik fizički klikne posle toga)
+      iframe.focus();
+    }
+  }, 260);
 
-})
+});
 
+/* ---------- reposition marker on resize/scroll ---------- */
+window.addEventListener('resize', showMarkerForSaved);
+window.addEventListener('scroll', showMarkerForSaved);
 
-
-// playlist
-
-const videos=[
-"dQw4w9WgXcQ",
-"9bZkp7q19f0",
-"3JZ_D3ELwOQ",
-"kJQP7kiw5Fk",
-"RgKAFK5djSk",
-"OPf0YbXqDm0",
-"JGwWNGJdvx8",
-"60ItHLz5WEA",
-"CevxZvSJLk8",
-"fRh_vgS2dFE",
-"lp-EO5I60KA",
-"KQ6zr6kCPj8",
-"pRpeEdMmmQ0",
-"hT_nvWreIhg",
-"YQHsXMglC9A"
-]
-
-const playlist=document.getElementById("playlist")
-
-videos.forEach(id=>{
-
-const btn=document.createElement("div")
-
-btn.className="video-btn"
-btn.innerText=id
-
-btn.onclick=()=>{
-player.src="https://www.youtube.com/embed/"+id
-}
-
-playlist.appendChild(btn)
-
-})
-
-updateTransform()
+/* ---------- init transform ---------- */
+applyTransform();
 
 </script>
-
 </body>
 </html>
