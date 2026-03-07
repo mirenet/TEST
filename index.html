@@ -1,113 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Circle Zoom Test</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: Arial;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    /* krug */
+    .circle {
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      overflow: hidden;
+      position: relative;
+      margin-top: 50px;
+      background: #000;
+      box-shadow: 0 0 25px rgba(0, 0, 0, .6);
+    }
 
-<title>YouTube Circle Zoom Test</title>
+    /* video */
+    .circle iframe {
+      width: 640px;
+      height: 360px;
+      border: 0;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      transform-origin: center;
+    }
 
-<style>
+    /* kontrole */
+    .controls {
+      margin-top: 30px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
 
-body{
-  margin:0;
-  background:#111;
-  color:white;
-  font-family:Arial;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
+    .controls input[type="range"] {
+      width: 100%;
+    }
 
-/* krug */
+    .controls input[type="number"] {
+      width: 80px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
 
-.circle{
-  width:300px;
-  height:300px;
-  border-radius:50%;
-  overflow:hidden;
-  position:relative;
-  margin-top:50px;
-  background:#000;
-  box-shadow:0 0 25px rgba(0,0,0,.6);
-}
+    .controls input[type="text"] {
+      width: 80px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
 
-/* video */
+    /* overlay za klikove */
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      display: block;
+    }
 
-.circle iframe{
-  width:640px;
-  height:360px;
-  border:0;
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%) scale(1);
-  transform-origin:center;
-}
-
-/* kontrole */
-
-.controls{
-  margin-top:30px;
-  width:90%;
-  max-width:400px;
-  text-align:center;
-}
-
-.controls input[type="range"]{
-  width:100%;
-}
-
-.controls input[type="number"]{
-  width:80px;
-  margin-top:10px;
-  font-size:16px;
-}
-
-.controls input[type="text"]{
-  width:80px;
-  margin-top:10px;
-  font-size:16px;
-}
-
-/* playlist */
-
-.playlist{
-  margin-top:30px;
-  width:95%;
-  max-width:500px;
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:8px;
-}
-
-.video-btn{
-  padding:8px;
-  background:#222;
-  border:1px solid #444;
-  font-size:12px;
-  text-align:center;
-  cursor:pointer;
-}
-
-.video-btn:active{
-  background:#333;
-}
-
-/* overlay za klikove */
-
-.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  cursor: pointer;
-  display: block;
-}
-
-</style>
+  </style>
 </head>
 
 <body>
@@ -115,10 +83,9 @@ body{
 <h3>YouTube Circle Zoom Test</h3>
 
 <div class="circle" id="circle">
-  <iframe
-    id="player"
-    src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
-    allowfullscreen>
+  <iframe id="player"
+          src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
+          allowfullscreen>
   </iframe>
 
   <!-- Overlay za detekciju klika -->
@@ -129,21 +96,11 @@ body{
 
   <p>Zoom video</p>
 
-  <input
-    type="range"
-    id="zoomSlider"
-    min="0.3"
-    max="1.5"
-    step="0.05"
-    value="1">
+  <input type="range" id="zoomSlider" min="0.3" max="1.5" step="0.05" value="1">
 
   <br><br>
 
-  <input
-    type="number"
-    id="zoomInput"
-    step="0.05"
-    value="1">
+  <input type="number" id="zoomInput" step="0.05" value="1">
 
   <br><br>
 
@@ -153,94 +110,93 @@ body{
 
 </div>
 
-<div class="playlist" id="playlist"></div>
-
 <script>
 
-// lista 15 muzičkih videa
-const videos = [
-  "dQw4w9WgXcQ", "9bZkp7q19f0", "3JZ_D3ELwOQ", "kJQP7kiw5Fk",
-  "RgKAFK5djSk", "OPf0YbXqDm0", "JGwWNGJdvx8", "60ItHLz5WEA",
-  "CevxZvSJLk8", "fRh_vgS2dFE", "lp-EO5I60KA", "KQ6zr6kCPj8",
-  "pRpeEdMmmQ0", "hT_nvWreIhg", "YQHsXMglC9A"
-];
+  const player = document.getElementById("player");
+  const slider = document.getElementById("zoomSlider");
+  const input = document.getElementById("zoomInput");
+  const skipX = document.getElementById("skipX");
+  const skipY = document.getElementById("skipY");
+  const overlay = document.getElementById("overlay");
+  const circle = document.getElementById("circle");
 
-const player = document.getElementById("player");
-const slider = document.getElementById("zoomSlider");
-const input = document.getElementById("zoomInput");
-const skipX = document.getElementById("skipX");
-const skipY = document.getElementById("skipY");
+  let skipPos = { x: 150, y: 150 }; // Default position for skip button
+  let videoNormalScale = 1;
+  let zoomed = false;
 
-const circle = document.getElementById("circle");
-const overlay = document.getElementById("overlay");
+  let lastTap = 0; // For double tap detection
+  let singleTapTimeout;
 
-let skipPos = { x: 150, y: 150 }; // Default position for skip button
-let videoNormalScale = 1;
-let zoomed = false;
-
-// Video Zoom function
-function setZoom(v){
-  videoNormalScale = parseFloat(v);
-  player.style.transform = "translate(-50%,-50%) scale("+videoNormalScale+")";
-  slider.value = v;
-  input.value = v;
-}
-
-slider.oninput = () => { setZoom(slider.value); }
-input.oninput = () => { setZoom(input.value); }
-
-// Set the skip position manually (pomoću X i Y koordinata)
-skipX.oninput = () => {
-  skipPos.x = parseInt(skipX.value, 10);
-  updateSkipPosition();
-}
-
-skipY.oninput = () => {
-  skipPos.y = parseInt(skipY.value, 10);
-  updateSkipPosition();
-}
-
-// Ažuriranje pozicije videa unutar kruga
-function updateSkipPosition() {
-  player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
-}
-
-// Playlist
-const playlist = document.getElementById("playlist");
-
-videos.forEach(id => {
-  const btn = document.createElement("div");
-  btn.className = "video-btn";
-  btn.innerText = id;
-  btn.onclick = () => {
-    player.src = `https://www.youtube.com/embed/${id}`;
-  };
-  playlist.appendChild(btn);
-});
-
-// Dupli klik - Prebacuje između moda za zumiranje i moda za poziciju skip dugmeta
-let lastTap = 0;
-overlay.addEventListener("click", (e) => {
-  const now = Date.now();
-  if (now - lastTap < 300) {
-    // Detektovan dupli klik, prebacuje između modova
-    if (zoomed) {
-      setZoom(videoNormalScale); // Vraća zoom na početnu poziciju
-      zoomed = false;
-    } else {
-      // Prebacuje u skip button poziciju
-      player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
-      zoomed = true;
-    }
-    // Povratak overlay-a nakon 1 sekunde
-    setTimeout(() => overlay.style.display = "block", 1000);
-  } else {
-    // Ako je jedan klik, sačekaj i zatim vrati overlay
-    setTimeout(() => overlay.style.display = "block", 1000);
+  // Video Zoom function
+  function setZoom(v) {
+    videoNormalScale = parseFloat(v);
+    player.style.transform = "translate(-50%,-50%) scale(" + videoNormalScale + ")";
+    slider.value = v;
+    input.value = v;
   }
-  overlay.style.display = "none"; // Sakrij overlay dok ne prođe klik
-  lastTap = now;
-});
+
+  slider.oninput = () => {
+    setZoom(slider.value);
+  }
+
+  input.oninput = () => {
+    setZoom(input.value);
+  }
+
+  // Set the skip position manually (pomoću X i Y koordinata)
+  skipX.oninput = () => {
+    skipPos.x = parseInt(skipX.value, 10);
+    updateSkipPosition();
+  }
+
+  skipY.oninput = () => {
+    skipPos.y = parseInt(skipY.value, 10);
+    updateSkipPosition();
+  }
+
+  // Ažuriranje pozicije videa unutar kruga
+  function updateSkipPosition() {
+    player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
+  }
+
+  // Detect single click and double click
+  overlay.addEventListener("click", (e) => {
+    const now = Date.now();
+    const timeDifference = now - lastTap;
+
+    if (timeDifference < 300) {
+      // Detektovan je dupli klik
+      if (zoomed) {
+        setZoom(videoNormalScale); // Vraća zoom na početnu poziciju
+        zoomed = false;
+      } else {
+        // Prebacuje u skip button poziciju
+        player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
+        zoomed = true;
+      }
+
+      // Sakrivanje overlay-a odmah nakon duplog klika
+      overlay.style.display = "none";
+
+      // Ponovno pokazivanje overlay-a nakon 1 sekunde
+      setTimeout(() => {
+        overlay.style.display = "block";
+      }, 1000);
+
+    } else {
+      // Jedan klik (single tap) - ako nije dupli klik, čekaj 1 sekundu i ponovo prikaži overlay
+      clearTimeout(singleTapTimeout);
+      singleTapTimeout = setTimeout(() => {
+        overlay.style.display = "block";
+      }, 1000);
+
+      // Sakrivanje overlay-a odmah nakon klika
+      overlay.style.display = "none";
+    }
+
+    // Spremi vreme za detekciju sledećeg klika
+    lastTap = now;
+  });
 
 </script>
 
