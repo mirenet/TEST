@@ -230,7 +230,7 @@ overlay.addEventListener("touchmove", e => {
 // Single tap
 overlay.addEventListener("touchend", e => {
   if (e.touches.length === 0) {
-    // Single tap: Passes click through to the player
+    // Single tap: Passes click through
     const now = Date.now();
     if (now - lastTap < 300) {
       // Double tap detected
