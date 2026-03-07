@@ -1,120 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>YouTube Circle Player</title>
-
 <style>
-
 body{
-margin:0;
-background:#111;
-color:white;
-font-family:Arial;
-display:flex;
-flex-direction:column;
-align-items:center;
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:Arial;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
 .circle{
-width:300px;
-height:300px;
-border-radius:50%;
-overflow:hidden;
-position:relative;
-margin-top:40px;
-background:#000;
-box-shadow:0 0 25px rgba(0,0,0,.6);
+  width:300px;
+  height:300px;
+  border-radius:50%;
+  overflow:hidden;
+  position:relative;
+  margin-top:40px;
+  background:#000;
+  box-shadow:0 0 25px rgba(0,0,0,.6);
 }
 
 .circle iframe {
-  width: 640px;   /* početna širina */
-  height: 360px;  /* početna visina */
+  width: 640px;   
+  height: 360px;  
   border: 0;
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  transform-origin: center;
-  zoom: 1; /* početni zoom */
+  transform: translate(-50%, -50%) scale(1);
+  transform-origin: center center;
 }
 
 .controls{
-margin-top:20px;
-width:90%;
-max-width:400px;
-text-align:center;
+  margin-top:20px;
+  width:90%;
+  max-width:400px;
+  text-align:center;
 }
 
 .controls input[type="range"]{
-width:100%;
+  width:100%;
 }
 
 .buttons{
-margin-top:10px;
+  margin-top:10px;
 }
 
 .buttons button{
-padding:6px 12px;
-margin:3px;
-background:#222;
-color:white;
-border:1px solid #444;
-cursor:pointer;
+  padding:6px 12px;
+  margin:3px;
+  background:#222;
+  color:white;
+  border:1px solid #444;
+  cursor:pointer;
 }
 
 .playlist{
-margin-top:20px;
-width:95%;
-max-width:500px;
-height:250px;
-overflow-y:auto;
-background:#000;
-border:1px solid #333;
+  margin-top:20px;
+  width:95%;
+  max-width:500px;
+  height:250px;
+  overflow-y:auto;
+  background:#000;
+  border:1px solid #333;
 }
 
 .video-btn{
-padding:6px;
-border-bottom:1px solid #222;
-font-size:12px;
-cursor:pointer;
+  padding:6px;
+  border-bottom:1px solid #222;
+  font-size:12px;
+  cursor:pointer;
 }
 
 .video-btn:hover{
-background:#222;
+  background:#222;
 }
-
 </style>
 </head>
-
 <body>
 
 <h3>YouTube Circle Player</h3>
 
 <div class="circle">
-<div id="player"></div>
+  <div id="player"></div>
 </div>
 
 <div class="controls">
-
-<p>Zoom video</p>
-
-<input
-type="range"
-id="zoomSlider"
-min="0.5"
-max="1.5"
-step="0.05"
-value="1">
-
-<div class="buttons">
-<button onclick="playRandom()">Play</button>
-<button onclick="nextRandom()">Next</button>
-</div>
-
+  <p>Zoom video</p>
+  <input type="range" id="zoomSlider" min="0.5" max="2" step="0.05" value="1">
+  <div class="buttons">
+    <button onclick="playRandom()">Play</button>
+    <button onclick="nextRandom()">Next</button>
+  </div>
 </div>
 
 <div class="playlist" id="playlist"></div>
@@ -124,9 +107,7 @@ value="1">
 <script>
 
 /* UBACI OVDE CEO SVOJ JSON */
-
 const playlistData = [
-  
   {
     "key": "Sheena Easton - Sheena Easton-Morning Train",
     "artist": "Sheena Easton",
@@ -1009,97 +990,67 @@ const playlistData = [
     "youtubeUrl": "https://www.youtube.com/watch?v=2l0zEj11BuM",
     "addedAt": 1772689706682
   }
-
-/* ovde ide ceo tvoj JSON koji si poslao */
 ];
 
-
 /* IZVUCI URL-OVE */
-
 const videos = playlistData.map(v=>v.youtubeUrl);
 
-
 /* YOUTUBE */
-
 let player;
 
 function getId(url){
-return url.split("v=")[1];
+  const params = new URL(url).searchParams;
+  return params.get("v");
 }
 
 function onYouTubeIframeAPIReady(){
-
-player = new YT.Player('player',{
-height:'360',
-width:'640',
-videoId:getId(videos[0]),
-events:{ 'onStateChange':onPlayerStateChange }
-});
-
+  player = new YT.Player('player',{
+    height:'360',
+    width:'640',
+    videoId:getId(videos[0]),
+    events:{ 'onStateChange':onPlayerStateChange }
+  });
 }
 
 function onPlayerStateChange(e){
-
-if(e.data === YT.PlayerState.ENDED){
-nextRandom();
+  if(e.data === YT.PlayerState.ENDED){
+    nextRandom();
+  }
 }
-
-}
-
 
 /* RANDOM */
-
 function playRandom(){
-
-const i = Math.floor(Math.random()*videos.length);
-player.loadVideoById(getId(videos[i]));
-
+  const i = Math.floor(Math.random()*videos.length);
+  player.loadVideoById(getId(videos[i]));
 }
 
 function nextRandom(){
-playRandom();
+  playRandom();
 }
 
-
 /* ZOOM */
-
 const slider = document.getElementById("zoomSlider");
 
 slider.oninput = () => {
   if (player && player.getIframe) {
     const iframe = player.getIframe();
-    iframe.style.transform = "translate(-50%,-50%) scale(" + slider.value + ")";
+    iframe.style.transform = "translate(-50%, -50%) scale(" + slider.value + ")";
   }
 };
 
-
 /* PLAYLIST UI */
-
 const playlist = document.getElementById("playlist");
 
-playlistData.forEach(v=>{
-
-const div=document.createElement("div");
-
-div.className="video-btn";
-
-div.innerText = v.artist + " - " + v.track;
-
-div.onclick=()=>{
-player.loadVideoById(getId(v.youtubeUrl));
-};
-
-playlist.appendChild(div);
-
+playlistData.forEach((v,i)=>{
+  const div=document.createElement("div");
+  div.className="video-btn";
+  div.innerText = v.artist + " - " + v.track;
+  div.onclick=()=>{
+    player.loadVideoById(getId(v.youtubeUrl));
+  };
+  playlist.appendChild(div);
 });
 
-function setZoom(v){
-  player.style.zoom = v;      // pravi "browser zoom"
-  slider.value = v;
-  input.value = v;
-}
-  
 </script>
-
 </body>
 </html>
