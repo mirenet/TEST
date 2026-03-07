@@ -94,6 +94,19 @@ body{
   background:#333;
 }
 
+/* overlay za klikove */
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  display: block;
+}
+
 </style>
 </head>
 
@@ -107,6 +120,9 @@ body{
     src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
     allowfullscreen>
   </iframe>
+
+  <!-- Overlay za detekciju klika -->
+  <div id="overlay" class="overlay"></div>
 </div>
 
 <div class="controls">
@@ -156,6 +172,7 @@ const skipX = document.getElementById("skipX");
 const skipY = document.getElementById("skipY");
 
 const circle = document.getElementById("circle");
+const overlay = document.getElementById("overlay");
 
 let skipPos = { x: 150, y: 150 }; // Default position for skip button
 let videoNormalScale = 1;
@@ -203,10 +220,10 @@ videos.forEach(id => {
 
 // Dupli klik - Prebacuje između moda za zumiranje i moda za poziciju skip dugmeta
 let lastTap = 0;
-circle.addEventListener("click", (e) => {
+overlay.addEventListener("click", (e) => {
   const now = Date.now();
   if (now - lastTap < 300) {
-    // Dupli klik prebacuje između moda
+    // Detektovan dupli klik, prebacuje između modova
     if (zoomed) {
       setZoom(videoNormalScale); // Vraća zoom na početnu poziciju
       zoomed = false;
@@ -215,7 +232,13 @@ circle.addEventListener("click", (e) => {
       player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
       zoomed = true;
     }
+    // Povratak overlay-a nakon 1 sekunde
+    setTimeout(() => overlay.style.display = "block", 1000);
+  } else {
+    // Ako je jedan klik, sačekaj i zatim vrati overlay
+    setTimeout(() => overlay.style.display = "block", 1000);
   }
+  overlay.style.display = "none"; // Sakrij overlay dok ne prođe klik
   lastTap = now;
 });
 
