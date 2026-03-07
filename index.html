@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Circle Player Pop-Out Button</title>
+<title>YouTube Circle Zoom Player</title>
 <style>
-body {
+body{
   margin:0;
   background:#111;
   color:white;
@@ -15,24 +15,20 @@ body {
   align-items:center;
 }
 
-h3 {
-  margin-top:20px;
-}
-
 /* krug */
-.circle {
+.circle{
   width:300px;
   height:300px;
   border-radius:50%;
   overflow:hidden;
   position:relative;
-  margin-top:40px;
+  margin-top:50px;
   background:#000;
   box-shadow:0 0 25px rgba(0,0,0,.6);
 }
 
 /* video */
-.circle iframe {
+.circle iframe{
   width:640px;
   height:360px;
   border:0;
@@ -41,38 +37,42 @@ h3 {
   left:50%;
   transform:translate(-50%,-50%) scale(1);
   transform-origin:center;
-  transition: all 0.3s ease;
+  transition: transform 0.3s;
+  z-index:1;
 }
 
-/* pop-out dugme */
-.popout-btn {
-  position:absolute;
-  top:10px;
-  right:10px;
-  background:rgba(255,255,255,0.2);
+/* dugme za pop-out */
+#popOutBtn {
+  position: absolute;
+  top:5px;
+  right:5px;
+  width:30px;
+  height:30px;
+  background:#222;
   color:white;
-  border:none;
-  padding:4px 8px;
+  text-align:center;
+  line-height:30px;
   cursor:pointer;
-  font-size:18px;
+  border-radius:4px;
   z-index:10;
+  font-weight:bold;
 }
 
 /* kontrole */
-.controls {
-  margin-top:20px;
+.controls{
+  margin-top:30px;
   width:90%;
   max-width:400px;
   text-align:center;
 }
 
-.controls input[type="range"] {
+.controls input[type="range"]{
   width:100%;
 }
 
 /* playlist */
-.playlist {
-  margin-top:20px;
+.playlist{
+  margin-top:30px;
   width:95%;
   max-width:500px;
   display:grid;
@@ -80,7 +80,7 @@ h3 {
   gap:8px;
 }
 
-.video-btn {
+.video-btn{
   padding:8px;
   background:#222;
   border:1px solid #444;
@@ -89,18 +89,22 @@ h3 {
   cursor:pointer;
 }
 
-.video-btn:active {
+.video-btn:active{
   background:#333;
 }
 </style>
 </head>
 <body>
 
-<h3>YouTube Circle Player Pop-Out</h3>
+<h3>YouTube Circle Zoom Player</h3>
 
 <div class="circle" id="circle">
-  <iframe id="player" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
-  <button class="popout-btn" id="popoutBtn">→</button>
+  <iframe
+    id="player"
+    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+    allowfullscreen>
+  </iframe>
+  <div id="popOutBtn">→</div>
 </div>
 
 <div class="controls">
@@ -111,7 +115,7 @@ h3 {
 <div class="playlist" id="playlist"></div>
 
 <script>
-// lista videa
+// playlist videa
 const videos = [
 "dQw4w9WgXcQ",
 "9bZkp7q19f0",
@@ -133,52 +137,44 @@ const videos = [
 const player = document.getElementById("player");
 const slider = document.getElementById("zoomSlider");
 const circle = document.getElementById("circle");
-const popoutBtn = document.getElementById("popoutBtn");
+const popOutBtn = document.getElementById("popOutBtn");
 
-function setZoom(v){
-  player.style.transform = "translate(-50%,-50%) scale("+v+")";
-  slider.value = v;
-}
+let poppedOut = false;
 
-slider.oninput = ()=>{
-  setZoom(slider.value);
+// zoom
+slider.oninput = () => {
+  const scale = slider.value;
+  player.style.transform = `translate(-50%,-50%) scale(${scale})`;
 };
 
-// playlist dugmići
-const playlist = document.getElementById("playlist");
-videos.forEach(id=>{
+// playlist dugmad
+const playlistDiv = document.getElementById("playlist");
+videos.forEach(id => {
   const btn = document.createElement("div");
   btn.className = "video-btn";
   btn.innerText = id;
-  btn.onclick = ()=>{
-    player.src = "https://www.youtube.com/embed/"+id+"?autoplay=1";
+  btn.onclick = () => {
+    player.src = `https://www.youtube.com/embed/${id}?autoplay=1`;
   };
-  playlist.appendChild(btn);
+  playlistDiv.appendChild(btn);
 });
 
-// pop-out logika
-let poppedOut = false;
-
-popoutBtn.addEventListener("click", (e)=>{
-  e.stopPropagation(); // ne propagira klik do kruga
+// pop-out dugme
+popOutBtn.onclick = (e) => {
+  e.stopPropagation(); // ne propagira klik van videa
   if(!poppedOut){
-    player.style.width = "90vw";
-    player.style.height = "calc(90vw * 9 / 16)";
-    circle.style.overflow = "visible";
+    player.style.transform = `translate(-50%,-50%) scale(1.5)`;
+    player.style.zIndex = 20;
     poppedOut = true;
   }
-});
+};
 
-// klik van videa vraca u krug
-document.body.addEventListener("click", (e)=>{
-  if(poppedOut){
-    // proveri da li klik nije unutar videa
-    if(!circle.contains(e.target)){
-      player.style.width = "640px";
-      player.style.height = "360px";
-      circle.style.overflow = "hidden";
-      poppedOut = false;
-    }
+// klik van videa vraća nazad
+document.body.addEventListener('click', (e) => {
+  if(poppedOut && !circle.contains(e.target)){
+    player.style.transform = `translate(-50%,-50%) scale(${slider.value})`;
+    player.style.zIndex = 1;
+    poppedOut = false;
   }
 });
 </script>
