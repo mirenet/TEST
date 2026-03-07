@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>YouTube Circle Zoom Test</title>
+<title>YouTube Circle Player</title>
 
 <style>
 
@@ -19,20 +19,16 @@ flex-direction:column;
 align-items:center;
 }
 
-/* krug */
-
 .circle{
 width:300px;
 height:300px;
 border-radius:50%;
 overflow:hidden;
 position:relative;
-margin-top:50px;
+margin-top:40px;
 background:#000;
 box-shadow:0 0 25px rgba(0,0,0,.6);
 }
-
-/* video */
 
 .circle iframe{
 width:640px;
@@ -45,10 +41,8 @@ transform:translate(-50%,-50%) scale(1);
 transform-origin:center;
 }
 
-/* kontrole */
-
 .controls{
-margin-top:30px;
+margin-top:20px;
 width:90%;
 max-width:400px;
 text-align:center;
@@ -58,34 +52,38 @@ text-align:center;
 width:100%;
 }
 
-.controls input[type="number"]{
-width:80px;
+.buttons{
 margin-top:10px;
-font-size:16px;
 }
 
-/* playlist */
-
-.playlist{
-margin-top:30px;
-width:95%;
-max-width:500px;
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:8px;
-}
-
-.video-btn{
-padding:8px;
+.buttons button{
+padding:6px 12px;
+margin:3px;
 background:#222;
+color:white;
 border:1px solid #444;
-font-size:12px;
-text-align:center;
 cursor:pointer;
 }
 
-.video-btn:active{
-background:#333;
+.playlist{
+margin-top:20px;
+width:95%;
+max-width:500px;
+height:250px;
+overflow-y:auto;
+background:#000;
+border:1px solid #333;
+}
+
+.video-btn{
+padding:6px;
+border-bottom:1px solid #222;
+font-size:12px;
+cursor:pointer;
+}
+
+.video-btn:hover{
+background:#222;
 }
 
 </style>
@@ -93,14 +91,10 @@ background:#333;
 
 <body>
 
-<h3>YouTube Circle Zoom Test</h3>
+<h3>YouTube Circle Player</h3>
 
 <div class="circle">
-<iframe
-id="player"
-src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-allowfullscreen>
-</iframe>
+<div id="player"></div>
 </div>
 
 <div class="controls">
@@ -110,82 +104,109 @@ allowfullscreen>
 <input
 type="range"
 id="zoomSlider"
-min="0.3"
+min="0.5"
 max="1.5"
 step="0.05"
 value="1">
 
-<br><br>
-
-<input
-type="number"
-id="zoomInput"
-step="0.05"
-value="1">
+<div class="buttons">
+<button onclick="playRandom()">Play</button>
+<button onclick="nextRandom()">Next</button>
+</div>
 
 </div>
 
 <div class="playlist" id="playlist"></div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
 
-// lista 15 muzičkih videa
-const videos = [
-"dQw4w9WgXcQ",
-"9bZkp7q19f0",
-"3JZ_D3ELwOQ",
-"kJQP7kiw5Fk",
-"RgKAFK5djSk",
-"OPf0YbXqDm0",
-"JGwWNGJdvx8",
-"60ItHLz5WEA",
-"CevxZvSJLk8",
-"fRh_vgS2dFE",
-"lp-EO5I60KA",
-"KQ6zr6kCPj8",
-"pRpeEdMmmQ0",
-"hT_nvWreIhg",
-"YQHsXMglC9A"
+/* UBACI OVDE CEO SVOJ JSON */
+
+const playlistData = [
+/* ovde ide ceo tvoj JSON koji si poslao */
 ];
 
-const player = document.getElementById("player");
-const slider = document.getElementById("zoomSlider");
-const input = document.getElementById("zoomInput");
 
-function setZoom(v){
+/* IZVUCI URL-OVE */
 
-player.style.transform =
-"translate(-50%,-50%) scale("+v+")";
+const videos = playlistData.map(v=>v.youtubeUrl);
 
-slider.value=v;
-input.value=v;
+
+/* YOUTUBE */
+
+let player;
+
+function getId(url){
+return url.split("v=")[1];
+}
+
+function onYouTubeIframeAPIReady(){
+
+player = new YT.Player('player',{
+height:'360',
+width:'640',
+videoId:getId(videos[0]),
+events:{ 'onStateChange':onPlayerStateChange }
+});
 
 }
+
+function onPlayerStateChange(e){
+
+if(e.data === YT.PlayerState.ENDED){
+nextRandom();
+}
+
+}
+
+
+/* RANDOM */
+
+function playRandom(){
+
+const i = Math.floor(Math.random()*videos.length);
+player.loadVideoById(getId(videos[i]));
+
+}
+
+function nextRandom(){
+playRandom();
+}
+
+
+/* ZOOM */
+
+const slider = document.getElementById("zoomSlider");
 
 slider.oninput=()=>{
-setZoom(slider.value);
-}
 
-input.oninput=()=>{
-setZoom(input.value);
-}
+const iframe=document.querySelector("#player iframe");
 
-// playlist
+iframe.style.transform =
+"translate(-50%,-50%) scale("+slider.value+")";
 
-const playlist=document.getElementById("playlist");
-
-videos.forEach(id=>{
-
-const btn=document.createElement("div");
-
-btn.className="video-btn";
-btn.innerText=id;
-
-btn.onclick=()=>{
-player.src="https://www.youtube.com/embed/"+id;
 };
 
-playlist.appendChild(btn);
+
+/* PLAYLIST UI */
+
+const playlist = document.getElementById("playlist");
+
+playlistData.forEach(v=>{
+
+const div=document.createElement("div");
+
+div.className="video-btn";
+
+div.innerText = v.artist + " - " + v.track;
+
+div.onclick=()=>{
+player.loadVideoById(getId(v.youtubeUrl));
+};
+
+playlist.appendChild(div);
 
 });
 
