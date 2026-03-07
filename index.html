@@ -124,8 +124,8 @@
   let videoNormalScale = 1;
   let zoomed = false;
 
-  let lastTap = 0; // For double tap detection
-  let singleTapTimeout;
+  let longPressTimer = null; // Timer for detecting long press
+  let isLongPress = false;
 
   // Video Zoom function
   function setZoom(v) {
@@ -159,13 +159,11 @@
     player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
   }
 
-  // Detect single click and double click
-  overlay.addEventListener("click", (e) => {
-    const now = Date.now();
-    const timeDifference = now - lastTap;
-
-    if (timeDifference < 300) {
-      // Detektovan je dupli klik
+  // Detect long press
+  overlay.addEventListener("mousedown", (e) => {
+    longPressTimer = setTimeout(() => {
+      isLongPress = true;
+      // Ako je dug klik, prebacujemo mod
       if (zoomed) {
         setZoom(videoNormalScale); // Vraća zoom na početnu poziciju
         zoomed = false;
@@ -182,20 +180,26 @@
       setTimeout(() => {
         overlay.style.display = "block";
       }, 1000);
+    }, 500); // Detekcija dužeg klika nakon 500ms
+  });
 
-    } else {
-      // Jedan klik (single tap) - ako nije dupli klik, čekaj 1 sekundu i ponovo prikaži overlay
-      clearTimeout(singleTapTimeout);
-      singleTapTimeout = setTimeout(() => {
+  overlay.addEventListener("mouseup", () => {
+    clearTimeout(longPressTimer); // Ako se klikne pre nego što traje 500ms, ne detektujemo long press
+    if (!isLongPress) {
+      // Jedan klik - ako nije dug klik, sakrivanje overlay-a i čekanje
+      setTimeout(() => {
         overlay.style.display = "block";
       }, 1000);
-
-      // Sakrivanje overlay-a odmah nakon klika
       overlay.style.display = "none";
     }
 
-    // Spremi vreme za detekciju sledećeg klika
-    lastTap = now;
+    isLongPress = false;
+  });
+
+  // Prevent default action of overlay
+  overlay.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
   });
 
 </script>
