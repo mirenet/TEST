@@ -1,208 +1,117 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube Circle Zoom Test</title>
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: Arial;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    /* krug */
-    .circle {
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      overflow: hidden;
-      position: relative;
-      margin-top: 50px;
-      background: #000;
-      box-shadow: 0 0 25px rgba(0, 0, 0, .6);
-    }
-
-    /* video */
-    .circle iframe {
-      width: 640px;
-      height: 360px;
-      border: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(1);
-      transform-origin: center;
-    }
-
-    /* kontrole */
-    .controls {
-      margin-top: 30px;
-      width: 90%;
-      max-width: 400px;
-      text-align: center;
-    }
-
-    .controls input[type="range"] {
-      width: 100%;
-    }
-
-    .controls input[type="number"] {
-      width: 80px;
-      margin-top: 10px;
-      font-size: 16px;
-    }
-
-    .controls input[type="text"] {
-      width: 80px;
-      margin-top: 10px;
-      font-size: 16px;
-    }
-
-    /* overlay za klikove */
-    .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      cursor: pointer;
-      display: block;
-    }
-
-  </style>
-</head>
-
-<body>
-
-<h3>YouTube Circle Zoom Test</h3>
-
-<div class="circle" id="circle">
-  <iframe id="player"
-          src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
-          allowfullscreen>
-  </iframe>
-
-  <!-- Overlay za detekciju klika -->
-  <div id="overlay" class="overlay"></div>
-</div>
-
-<div class="controls">
-
-  <p>Zoom video</p>
-
-  <input type="range" id="zoomSlider" min="0.3" max="1.5" step="0.05" value="1">
-
-  <br><br>
-
-  <input type="number" id="zoomInput" step="0.05" value="1">
-
-  <br><br>
-
-  <p>Skip Button Position (X, Y)</p>
-  <input type="text" id="skipX" placeholder="X" value="150">
-  <input type="text" id="skipY" placeholder="Y" value="150">
-
-</div>
-
 <script>
 
-  const player = document.getElementById("player");
-  const slider = document.getElementById("zoomSlider");
-  const input = document.getElementById("zoomInput");
-  const skipX = document.getElementById("skipX");
-  const skipY = document.getElementById("skipY");
-  const overlay = document.getElementById("overlay");
-  const circle = document.getElementById("circle");
+const player = document.getElementById("player");
+const overlay = document.getElementById("overlay");
 
-  let skipPos = { x: 150, y: 150 }; // Default position for skip button
-  let videoNormalScale = 1;
-  let zoomed = false;
+const slider = document.getElementById("zoomSlider");
+const input = document.getElementById("zoomInput");
 
-  let longPressTimer = null; // Timer for detecting long press
-  let isLongPress = false;
+const skipX = document.getElementById("skipX");
+const skipY = document.getElementById("skipY");
 
-  // Video Zoom function
-  function setZoom(v) {
-    videoNormalScale = parseFloat(v);
-    player.style.transform = "translate(-50%,-50%) scale(" + videoNormalScale + ")";
-    slider.value = v;
-    input.value = v;
+let zoom = 1;
+let posX = 0;
+let posY = 0;
+
+let skipPos = { x:150, y:150 };
+
+let tapCount = 0;
+let tapTimer = null;
+
+function updateTransform() {
+
+  player.style.transform =
+  `translate(-50%,-50%) translate(${posX}px, ${posY}px) scale(${zoom})`;
+
+}
+
+function setZoom(v){
+
+  zoom = parseFloat(v);
+
+  slider.value = zoom;
+  input.value = zoom;
+
+  updateTransform();
+
+}
+
+slider.oninput = () => setZoom(slider.value);
+input.oninput = () => setZoom(input.value);
+
+
+skipX.oninput = () => {
+  skipPos.x = parseInt(skipX.value,10) || 0;
+}
+
+skipY.oninput = () => {
+  skipPos.y = parseInt(skipY.value,10) || 0;
+}
+
+
+
+function handleTap(){
+
+  tapCount++;
+
+  if(tapCount === 1){
+
+    tapTimer = setTimeout(()=>{
+
+      // SINGLE TAP
+      overlay.style.display="none";
+
+      setTimeout(()=>{
+        overlay.style.display="block";
+      },1000);
+
+      tapCount = 0;
+
+    },300);
+
   }
 
-  slider.oninput = () => {
-    setZoom(slider.value);
+  if(tapCount === 2){
+
+    clearTimeout(tapTimer);
+
+    // DOUBLE TAP (zoom skip)
+    posX = skipPos.x;
+    posY = skipPos.y;
+
+    zoom = 1.8;
+
+    updateTransform();
+
+    tapCount = 0;
+
   }
 
-  input.oninput = () => {
-    setZoom(input.value);
+  if(tapCount === 3){
+
+    clearTimeout(tapTimer);
+
+    // TRIPLE TAP (reset)
+    posX = 0;
+    posY = 0;
+    zoom = 1;
+
+    updateTransform();
+
+    tapCount = 0;
+
   }
 
-  // Set the skip position manually (pomoću X i Y koordinata)
-  skipX.oninput = () => {
-    skipPos.x = parseInt(skipX.value, 10);
-    updateSkipPosition();
-  }
+}
 
-  skipY.oninput = () => {
-    skipPos.y = parseInt(skipY.value, 10);
-    updateSkipPosition();
-  }
 
-  // Ažuriranje pozicije videa unutar kruga
-  function updateSkipPosition() {
-    player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
-  }
+// mouse
+overlay.addEventListener("click",handleTap);
 
-  // Detect long press
-  overlay.addEventListener("mousedown", (e) => {
-    longPressTimer = setTimeout(() => {
-      isLongPress = true;
-      // Ako je dug klik, prebacujemo mod
-      if (zoomed) {
-        setZoom(videoNormalScale); // Vraća zoom na početnu poziciju
-        zoomed = false;
-      } else {
-        // Prebacuje u skip button poziciju
-        player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
-        zoomed = true;
-      }
-
-      // Sakrivanje overlay-a odmah nakon duplog klika
-      overlay.style.display = "none";
-
-      // Ponovno pokazivanje overlay-a nakon 1 sekunde
-      setTimeout(() => {
-        overlay.style.display = "block";
-      }, 1000);
-    }, 500); // Detekcija dužeg klika nakon 500ms
-  });
-
-  overlay.addEventListener("mouseup", () => {
-    clearTimeout(longPressTimer); // Ako se klikne pre nego što traje 500ms, ne detektujemo long press
-    if (!isLongPress) {
-      // Jedan klik - ako nije dug klik, sakrivanje overlay-a i čekanje
-      setTimeout(() => {
-        overlay.style.display = "block";
-      }, 1000);
-      overlay.style.display = "none";
-    }
-
-    isLongPress = false;
-  });
-
-  // Prevent default action of overlay
-  overlay.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
+// touch
+overlay.addEventListener("touchstart",(e)=>{
+  e.preventDefault();
+  handleTap();
+});
 
 </script>
-
-</body>
-</html>
