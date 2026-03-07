@@ -1,145 +1,163 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Circle Zoom Test</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>YouTube Circle Zoom — Iskakanje videa</title>
 <style>
-body{
-  margin:0;
-  background:#111;
-  color:white;
-  font-family:Arial;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
+  :root{
+    --circle-size:300px;
+  }
 
-/* krug */
-.circle{
-  width:300px;
-  height:300px;
-  border-radius:50%;
-  overflow:hidden;
-  position:relative;
-  margin-top:50px;
-  background:#000;
-  box-shadow:0 0 25px rgba(0,0,0,.6);
-}
+  body{
+    margin:0;
+    background:#111;
+    color:#fff;
+    font-family:Arial, Helvetica, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
 
-/* video */
-.circle iframe{
-  width:640px;
-  height:360px;
-  border:0;
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%) scale(1);
-  transform-origin:center;
-  transition: all 0.4s ease;
-  cursor:pointer;
-  z-index:1;
-}
+  h3{ margin-top:24px; }
 
-/* overlay dugme u obliku strelice */
-.toggle-btn{
-  position:absolute;
-  top:10px;
-  right:10px;
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  background:rgba(255,255,255,0.2);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  z-index:2;
-  transition: background 0.2s;
-}
+  /* KRUG */
+  .circle{
+    width:var(--circle-size);
+    height:var(--circle-size);
+    border-radius:50%;
+    overflow:hidden;
+    position:relative;
+    margin-top:30px;
+    background:#000;
+    box-shadow:0 6px 30px rgba(0,0,0,.6);
+  }
 
-.toggle-btn:hover{
-  background:rgba(255,255,255,0.4);
-}
+  /* IFRAME (osnovno ponašanje) */
+  #player{
+    width:640px;      /* osnovne dimenzije video okvira */
+    height:360px;
+    border:0;
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%) scale(var(--zoom,1));
+    transform-origin:center;
+    transition: all .33s ease;
+    z-index:1;
+    background:#000;
+  }
 
-.toggle-btn::after{
-  content:"\2197"; /* strelica gore-desno */
-  font-size:20px;
-  color:white;
-}
+  /* DUGME (overlay unutar kruga) */
+  .toggle-btn{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,0.12);
+    backdrop-filter: blur(2px);
+    border:1px solid rgba(255,255,255,0.08);
+    cursor:pointer;
+    z-index:2000; /* veći od iframe-a */
+    transition: background .15s, transform .12s;
+    box-shadow:0 4px 12px rgba(0,0,0,0.5);
+  }
+  .toggle-btn:hover{ background:rgba(255,255,255,0.22); transform:scale(1.03); }
 
-/* fullscreen overlay */
-.fullscreen-overlay{
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  width:80vw;
-  max-width:1280px;
-  height:45vw;
-  max-height:720px;
-  z-index:999;
-  cursor:pointer;
-  transition: all 0.4s ease;
-  border-radius:0;
-  box-shadow:0 0 40px rgba(0,0,0,0.7);
-}
+  /* SVG unutar dugmeta posmatrano kao strelica */
+  .toggle-btn svg{ width:18px; height:18px; color:#fff; display:block; }
 
-.controls{
-  margin-top:30px;
-  width:90%;
-  max-width:400px;
-  text-align:center;
-}
+  /* FULLSCREEN / FLOATING klasa, kad je video "iskakao" iz kruga */
+  .floating {
+    position:fixed !important;
+    top:50% !important;
+    left:50% !important;
+    transform:translate(-50%,-50%) scale(1) !important; /* normalna rezolucija u overlay-u */
+    width:80vw !important;
+    height:45vw !important;
+    max-width:1280px !important;
+    max-height:720px !important;
+    border-radius:8px !important;
+    z-index:10001 !important;
+    box-shadow:0 20px 60px rgba(0,0,0,0.7) !important;
+    transition: all .33s ease;
+  }
 
-.controls input[type="range"]{
-  width:100%;
-}
+  /* Kad je floating, dugme postaje 'x' i ostaje vidljivo */
+  .toggle-btn.open{ right:calc(50% - 40vw); /* jer se dugme nalazi relativno u odnosu na viewport, pomaknemo ga da bude na vrhu overlay-a */ }
+  @media (min-width:1000px){
+    .toggle-btn.open{ right:calc(50% - 640px/2); } /* prilagođavanje za široke ekrane */
+  }
 
-.controls input[type="number"]{
-  width:80px;
-  margin-top:10px;
-  font-size:16px;
-}
+  /* transparentni backdrop koji pokriva ekran — služi da klik van videa zatvori overlay */
+  #backdrop{
+    position:fixed;
+    inset:0;
+    z-index:10000;
+    display:none; /* pojavi se samo kad je floating */
+    background:transparent;
+  }
 
-.playlist{
-  margin-top:30px;
-  width:95%;
-  max-width:500px;
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:8px;
-}
+  /* Kontrole i playlist (ista kao i pre uz minimalne dorade) */
+  .controls{
+    margin-top:20px;
+    width:90%;
+    max-width:460px;
+    text-align:center;
+  }
+  .controls input[type="range"]{ width:100%; }
+  .controls input[type="number"]{ width:90px; margin-top:10px; font-size:16px; }
 
-.video-btn{
-  padding:8px;
-  background:#222;
-  border:1px solid #444;
-  font-size:12px;
-  text-align:center;
-  cursor:pointer;
-}
-
-.video-btn:active{
-  background:#333;
-}
+  .playlist{
+    margin-top:18px;
+    width:95%;
+    max-width:720px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+  .video-btn{
+    padding:8px;
+    background:#222;
+    border:1px solid #444;
+    font-size:12px;
+    text-align:center;
+    cursor:pointer;
+    user-select:none;
+  }
+  .video-btn:active{ background:#333; }
 </style>
 </head>
-
 <body>
 
 <h3>YouTube Circle Zoom Test</h3>
 
-<div class="circle">
-  <iframe
-    id="player"
-    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-    allowfullscreen>
-  </iframe>
-  <div class="toggle-btn" id="toggleBtn"></div>
+<div class="circle" id="circle">
+  <!-- iframe video -->
+  <iframe id="player"
+          src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+  ></iframe>
+
+  <!-- dugme (overlay) -->
+  <button class="toggle-btn" id="toggleBtn" aria-label="Iskoči video">
+    <!-- strelica gore-desno kao SVG -->
+    <svg viewBox="0 0 24 24" id="toggleIcon" aria-hidden="true">
+      <path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3z"/>
+    </svg>
+  </button>
 </div>
+
+<!-- backdrop koji hvata klik van videa dok je overlay otvoren -->
+<div id="backdrop" tabindex="-1" aria-hidden="true"></div>
 
 <div class="controls">
   <p>Zoom video</p>
@@ -151,72 +169,130 @@ body{
 <div class="playlist" id="playlist"></div>
 
 <script>
-// lista 15 muzičkih videa
+/* ======= podaci i elementi ======= */
 const videos = [
-"dQw4w9WgXcQ",
-"9bZkp7q19f0",
-"3JZ_D3ELwOQ",
-"kJQP7kiw5Fk",
-"RgKAFK5djSk",
-"OPf0YbXqDm0",
-"JGwWNGJdvx8",
-"60ItHLz5WEA",
-"CevxZvSJLk8",
-"fRh_vgS2dFE",
-"lp-EO5I60KA",
-"KQ6zr6kCPj8",
-"pRpeEdMmmQ0",
-"hT_nvWreIhg",
-"YQHsXMglC9A"
+  "dQw4w9WgXcQ","9bZkp7q19f0","3JZ_D3ELwOQ","kJQP7kiw5Fk","RgKAFK5djSk",
+  "OPf0YbXqDm0","JGwWNGJdvx8","60ItHLz5WEA","CevxZvSJLk8","fRh_vgS2dFE",
+  "lp-EO5I60KA","KQ6zr6kCPj8","pRpeEdMmmQ0","hT_nvWreIhg","YQHsXMglC9A"
 ];
 
-const player = document.getElementById("player");
-const slider = document.getElementById("zoomSlider");
-const input = document.getElementById("zoomInput");
-const toggleBtn = document.getElementById("toggleBtn");
+const player = document.getElementById('player');
+const toggleBtn = document.getElementById('toggleBtn');
+const toggleIcon = document.getElementById('toggleIcon');
+const backdrop = document.getElementById('backdrop');
+const slider = document.getElementById('zoomSlider');
+const input = document.getElementById('zoomInput');
+const playlist = document.getElementById('playlist');
+const circle = document.getElementById('circle');
 
+let isFloating = false;
+let savedTransform = ''; // čuvamo prethodni transform za vraćanje
+let savedZoom = 1;       // čuvamo zoom vrednost pre izbacivanja
 let zoomValue = 1;
-let isFullscreen = false;
 
-function setZoom(v){
-  zoomValue = v;
-  player.style.transform = `translate(-50%,-50%) scale(${v})`;
-  slider.value = v;
-  input.value = v;
-}
-
-slider.oninput=()=> setZoom(slider.value);
-input.oninput=()=> setZoom(input.value);
-
-// playlist
-const playlist=document.getElementById("playlist");
-
+/* inicijalizacija playlist-e */
 videos.forEach(id=>{
-  const btn=document.createElement("div");
-  btn.className="video-btn";
-  btn.innerText=id;
-  btn.onclick=()=>{
-    player.src="https://www.youtube.com/embed/"+id;
+  const btn = document.createElement('div');
+  btn.className = 'video-btn';
+  btn.innerText = id;
+  btn.onclick = () => {
+    // promene videa ostavljamo stanje (ako je floating, ostaje floating)
+    const open = isFloating;
+    player.src = "https://www.youtube.com/embed/" + id;
+    // mala pauza da iframe učita — ali ne menjamo stanje overlay-a
+    if(open){
+      // osveži transformaciju u floating modu (ostaje normalna rezolucija)
+      player.classList.add('floating');
+    }
   };
   playlist.appendChild(btn);
 });
 
-// toggle fullscreen
-toggleBtn.onclick = () => {
-  if(!isFullscreen){
-    player.classList.add("fullscreen-overlay");
-    isFullscreen = true;
+/* ===== zoom funkcija (radi samo dok je u krugu) ===== */
+function applyZoom(v){
+  zoomValue = Number(v);
+  if(!isFloating){
+    player.style.setProperty('--zoom', zoomValue);
+    // inline transform održavamo da bismo mogli lako vratiti
+    player.style.transform = `translate(-50%,-50%) scale(${zoomValue})`;
   }
+  slider.value = zoomValue;
+  input.value = zoomValue;
 }
 
-// klik van fullscreen vraca u krug
-document.addEventListener("click",(e)=>{
-  if(isFullscreen && !player.contains(e.target) && e.target!==toggleBtn){
-    player.classList.remove("fullscreen-overlay");
-    isFullscreen = false;
+slider.addEventListener('input', ()=> applyZoom(slider.value));
+input.addEventListener('input', ()=> applyZoom(input.value));
+
+/* ===== toggle (iskakanje) ===== */
+function enterFloating(){
+  if(isFloating) return;
+  // sačuvaj prethodno stanje transform/zoom
+  savedTransform = player.style.transform || `translate(-50%,-50%) scale(${zoomValue})`;
+  savedZoom = zoomValue;
+
+  // ukloni zoom skaliranje i postavi overlay klasu
+  player.classList.add('floating');
+  // osiguramo da se prikaže u normalnoj rezoluciji (scale 1)
+  player.style.transform = 'translate(-50%,-50%) scale(1)';
+  // prikaži backdrop koji hvata klikove van videa
+  backdrop.style.display = 'block';
+  // promeni dugme u X (promenimo SVG PATH)
+  toggleIcon.innerHTML = '<path fill="currentColor" d="M18.3 5.71L13.41 10.6 18.3 15.49 16.89 16.9 11 11.01 5.11 16.9 3.7 15.49 9.59 10.6 3.7 4.71 5.11 3.3 11 9.19 16.89 3.3z"/>';
+  toggleBtn.classList.add('open');
+  isFloating = true;
+}
+
+function exitFloating(){
+  if(!isFloating) return;
+  // ukloni floating klasu
+  player.classList.remove('floating');
+  // vratimo pređašnji zoom/transform (sačuvan)
+  player.style.transform = savedTransform || `translate(-50%,-50%) scale(${savedZoom})`;
+  // sakrij backdrop
+  backdrop.style.display = 'none';
+  // vrati dugme u strelicu
+  toggleIcon.innerHTML = '<path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3z"/>';
+  toggleBtn.classList.remove('open');
+  isFloating = false;
+}
+
+/* klik na dugme */
+toggleBtn.addEventListener('click', (ev)=>{
+  ev.stopPropagation(); // ne šalji klik na document
+  if(!isFloating) enterFloating();
+  else exitFloating();
+});
+
+/* klik na backdrop -> zatvori overlay */
+backdrop.addEventListener('click', (ev)=>{
+  exitFloating();
+});
+
+/* ESC zatvara */
+document.addEventListener('keydown', (ev)=>{
+  if(ev.key === 'Escape' && isFloating){
+    exitFloating();
   }
 });
 
+/* ako klikneš negde u dokument (van dugmeta) dok nije floating — ništa (ne želimo nenamerno) */
+/* important: klikovi unutar iframe NE dolaze u naš document, zato koristimo backdrop za hvatanje klika van iframe dok je floating */
+
+/* inicijalni zoom var */
+applyZoom(1);
+
+/* ako promenimo video tokom floating stanja, zadržimo floating nastup */
+const origSetSrc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'src');
+/* ne menjamo descriptor — ne treba; playlist handler već menja src i zadržava stanje */
+
+/* BONUS: ako korisnik klikne na telo dok je floating, ali ne na backdrop (npr. na neke UI kontrole) — ne zatvaramo.
+   Backdrop hvata sve klikove van video okvira. */
+
+/* TEST: omogućimo klik preko iframe (korisno za debugging) - ne radimo to na produkciji
+   Ako želiš da klik u iframe takođe zatvori overlay (npr. da klik na sam video vrati u krug), napomeni i mogu to dodati
+*/
+
+/* Ako želiš: automatski pomeri toggle button da bude iznad floating prozora (koristimo .open klasu koja malo pozicionira) */
 </script>
 </body>
 </html>
