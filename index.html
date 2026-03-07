@@ -1,52 +1,132 @@
 <!DOCTYPE html>
 <html>
+<head>
+<meta charset="UTF-8">
+<title>YouTube Zoom Test</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+}
+
+.player-wrapper{
+width:640px;
+height:360px;
+margin:auto;
+overflow:hidden;
+border:2px solid #444;
+}
+
+.player-wrapper iframe{
+width:640px;
+height:360px;
+border:0;
+transform-origin:top left;
+}
+
+.controls{
+margin:20px;
+}
+
+.playlist{
+margin-top:30px;
+max-width:700px;
+margin-left:auto;
+margin-right:auto;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
+}
+
+.video-btn{
+padding:10px;
+background:#222;
+border:1px solid #555;
+cursor:pointer;
+}
+
+.video-btn:hover{
+background:#333;
+}
+
+</style>
+</head>
+
 <body>
 
-<div id="player"></div>
-<script src="https://www.youtube.com/iframe_api"></script>
+<h2>YouTube Player Zoom Test</h2>
+
+<div class="controls">
+Zoom:
+<input type="range" min="0.3" max="1.5" step="0.05" value="1" id="zoomSlider">
+<input type="number" step="0.05" value="1" id="zoomInput">
+</div>
+
+<div class="player-wrapper">
+<iframe id="player"
+src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+allowfullscreen></iframe>
+</div>
+
+<h3>Playlist</h3>
+
+<div class="playlist" id="playlist"></div>
 
 <script>
-let player;
-let ready = false;
 
-// validacija video ID-a
-function isValidVideoId(id) {
-  return /^[a-zA-Z0-9_-]{11}$/.test(id);
-}
+// lista 15 muzičkih videa
+const videos = [
+"dQw4w9WgXcQ",
+"9bZkp7q19f0",
+"3JZ_D3ELwOQ",
+"kJQP7kiw5Fk",
+"RgKAFK5djSk",
+"OPf0YbXqDm0",
+"JGwWNGJdvx8",
+"60ItHLz5WEA",
+"CevxZvSJLk8",
+"fRh_vgS2dFE",
+"lp-EO5I60KA",
+"KQ6zr6kCPj8",
+"pRpeEdMmmQ0",
+"hT_nvWreIhg",
+"YQHsXMglC9A"
+];
 
-function onYouTubeIframeAPIReady() {
-  // prvo čitaj ?v= parametar
-  const params = new URLSearchParams(location.search);
-  let id = params.get("v");
-  if (!isValidVideoId(id)) id = ''; // fallback ako nije validno
+const player = document.getElementById("player");
+const playlist = document.getElementById("playlist");
 
-  player = new YT.Player('player', {
-    height: '0',
-    width: '0',
-    videoId: id,
-    playerVars: {
-      autoplay: 1,
-      controls: 0,
-      modestbranding: 1,
-      mute: 1  // mute da autoplay radi pouzdano
-    },
-    events: {
-      onReady: () => { ready = true; }
-    }
-  });
-}
-
-// sluša poruke iz lokalnog HTML-a
-window.addEventListener("message", e => {
-  if (!player || !ready) return;
-  if (e.data.cmd === "play" && isValidVideoId(e.data.id)) {
-    player.loadVideoById(e.data.id);
-    if (e.data.unmute) player.unMute();
-  }
-  if (e.data.cmd === "pause") {
-    player.pauseVideo();
-  }
+videos.forEach(id=>{
+const btn = document.createElement("div");
+btn.className="video-btn";
+btn.innerText=id;
+btn.onclick=()=>{
+player.src="https://www.youtube.com/embed/"+id;
+};
+playlist.appendChild(btn);
 });
+
+const slider=document.getElementById("zoomSlider");
+const input=document.getElementById("zoomInput");
+
+function setZoom(v){
+player.style.transform="scale("+v+")";
+slider.value=v;
+input.value=v;
+}
+
+slider.oninput=()=>{
+setZoom(slider.value);
+};
+
+input.oninput=()=>{
+setZoom(input.value);
+};
+
 </script>
 
 </body>
