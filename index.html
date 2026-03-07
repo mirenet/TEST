@@ -1064,13 +1064,11 @@ playRandom();
 
 const slider = document.getElementById("zoomSlider");
 
-slider.oninput=()=>{
-
-const iframe=document.querySelector("#player iframe");
-
-iframe.style.transform =
-"translate(-50%,-50%) scale("+slider.value+")";
-
+slider.oninput = () => {
+  if (player && player.getIframe) {
+    const iframe = player.getIframe();
+    iframe.style.transform = "translate(-50%,-50%) scale(" + slider.value + ")";
+  }
 };
 
 
