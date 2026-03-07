@@ -25,6 +25,7 @@ h3{margin-top:20px;}
   margin-top:50px;
   background:#000;
   box-shadow:0 0 25px rgba(0,0,0,.6);
+  touch-action: manipulation;
 }
 
 /* video */
@@ -49,6 +50,7 @@ h3{margin-top:20px;}
   height:100%;
   z-index:100;
   background:transparent;
+  touch-action: none;
 }
 
 /* skip marker */
@@ -154,10 +156,10 @@ h3{margin-top:20px;}
 <script>
 // ---- lista videa ----
 const videos = [
-"dQw4w9WgXcQ","9bZkp7q19f0","3JZ_D3ELwOQ","kJQP7kiw5Fk",
-"RgKAFK5djSk","OPf0YbXqDm0","JGwWNGJdvx8","60ItHLz5WEA",
-"CevxZvSJLk8","fRh_vgS2dFE","lp-EO5I60KA","KQ6zr6kCPj8",
-"pRpeEdMmmQ0","hT_nvWreIhg","YQHsXMglC9A"
+  "dQw4w9WgXcQ", "9bZkp7q19f0", "3JZ_D3ELwOQ", "kJQP7kiw5Fk",
+  "RgKAFK5djSk", "OPf0YbXqDm0", "JGwWNGJdvx8", "60ItHLz5WEA",
+  "CevxZvSJLk8", "fRh_vgS2dFE", "lp-EO5I60KA", "KQ6zr6kCPj8",
+  "pRpeEdMmmQ0", "hT_nvWreIhg", "YQHsXMglC9A"
 ];
 const player = document.getElementById("player");
 const playlist = document.getElementById("playlist");
@@ -168,103 +170,107 @@ const circle = document.getElementById("circle");
 const menu = document.getElementById("menu");
 const skipMarker = document.getElementById("skipMarker");
 
-let skipPos = {x:150,y:150}; // centar po default
+let skipPos = {x:150, y:150}; // centar po default
 let editMode = null;
 let videoNormalScale = 1.15;
 let skipScale = 0.4;
+let lastTap = 0;
 
 // ---- Playlist ----
-videos.forEach(id=>{
-  const btn=document.createElement("div");
-  btn.className="video-btn";
-  btn.innerText=id;
-  btn.onclick=()=>{player.src="https://www.youtube.com/embed/"+id+"?enablejsapi=1";};
+videos.forEach(id => {
+  const btn = document.createElement("div");
+  btn.className = "video-btn";
+  btn.innerText = id;
+  btn.onclick = () => { player.src = "https://www.youtube.com/embed/" + id + "?enablejsapi=1"; };
   playlist.appendChild(btn);
 });
 
 // ---- Video Zoom ----
-function setZoom(v){
+function setZoom(v) {
   videoNormalScale = parseFloat(v);
   player.style.transform = `translate(-50%,-50%) scale(${videoNormalScale})`;
   slider.value = v;
   input.value = v;
 }
-slider.oninput = ()=>{ setZoom(slider.value); };
-input.oninput = ()=>{ setZoom(input.value); };
+
+slider.oninput = () => { setZoom(slider.value); };
+input.oninput = () => { setZoom(input.value); };
 
 // ---- Long press menu ----
 let pressTimer = null;
-overlay.addEventListener("touchstart", e=>{
-  pressTimer = setTimeout(()=>{
+overlay.addEventListener("touchstart", e => {
+  pressTimer = setTimeout(() => {
     // pauziraj video
     player.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-    menu.style.display="flex";
+    menu.style.display = "flex";
   }, 500);
 });
-overlay.addEventListener("touchend", e=>{
+
+overlay.addEventListener("touchend", e => {
   clearTimeout(pressTimer);
 });
 
 // ---- Menu buttons ----
-document.getElementById("menuZoom").onclick = ()=>{
-  editMode='zoom';
-  skipMarker.style.display='none';
-  menu.style.display='none';
+document.getElementById("menuZoom").onclick = () => {
+  editMode = 'zoom';
+  skipMarker.style.display = 'none';
+  menu.style.display = 'none';
 };
-document.getElementById("menuSkip").onclick = ()=>{
-  editMode='skip';
-  skipMarker.style.display='block';
-  skipMarker.style.left = skipPos.x-10+"px";
-  skipMarker.style.top = skipPos.y-10+"px";
-  menu.style.display='none';
+
+document.getElementById("menuSkip").onclick = () => {
+  editMode = 'skip';
+  skipMarker.style.display = 'block';
+  skipMarker.style.left = skipPos.x - 10 + "px";
+  skipMarker.style.top = skipPos.y - 10 + "px";
+  menu.style.display = 'none';
 };
-document.getElementById("menuClose").onclick = ()=>{
-  editMode=null;
-  skipMarker.style.display='none';
-  menu.style.display='none';
+
+document.getElementById("menuClose").onclick = () => {
+  editMode = null;
+  skipMarker.style.display = 'none';
+  menu.style.display = 'none';
 };
 
 // ---- Drag skip marker ----
-let dragOffset = {x:0,y:0};
-skipMarker.addEventListener("touchstart", e=>{
+let dragOffset = {x: 0, y: 0};
+skipMarker.addEventListener("touchstart", e => {
   dragOffset.x = e.touches[0].clientX - skipMarker.offsetLeft;
   dragOffset.y = e.touches[0].clientY - skipMarker.offsetTop;
 });
-skipMarker.addEventListener("touchmove", e=>{
-  if(editMode!=='skip') return;
+skipMarker.addEventListener("touchmove", e => {
+  if (editMode !== 'skip') return;
   let x = e.touches[0].clientX - dragOffset.x;
   let y = e.touches[0].clientY - dragOffset.y;
   // ograničenje unutar kruga
   const rect = circle.getBoundingClientRect();
-  x = Math.max(rect.left, Math.min(rect.right-20, x));
-  y = Math.max(rect.top, Math.min(rect.bottom-20, y));
+  x = Math.max(rect.left, Math.min(rect.right - 20, x));
+  y = Math.max(rect.top, Math.min(rect.bottom - 20, y));
   skipMarker.style.left = x + "px";
   skipMarker.style.top = y + "px";
 });
-skipMarker.addEventListener("touchend", e=>{
+skipMarker.addEventListener("touchend", e => {
   const rect = circle.getBoundingClientRect();
   skipPos.x = skipMarker.offsetLeft - rect.left + 10;
   skipPos.y = skipMarker.offsetTop - rect.top + 10;
 });
 
 // ---- Tap / Double tap ----
-let lastTap = 0;
-overlay.addEventListener("touchend", e=>{
+overlay.addEventListener("touchend", e => {
   const now = Date.now();
-  if(now - lastTap < 300){
-    // double tap
+  if (now - lastTap < 300) {
+    // dupli tap
     const rect = circle.getBoundingClientRect();
-    let dx = rect.width/2 - skipPos.x;
-    let dy = rect.height/2 - skipPos.y;
-    if(player.style.transform.includes(skipScale)){
-      // vrati normal zoom
+    let dx = rect.width / 2 - skipPos.x;
+    let dy = rect.height / 2 - skipPos.y;
+    if (player.style.transform.includes(skipScale)) {
+      // vrati na normal zoom
       player.style.transform = `translate(-50%,-50%) scale(${videoNormalScale})`;
     } else {
       // zumiraj skip dugme
       player.style.transform = `translate(${dx}px, ${dy}px) scale(${skipScale})`;
     }
   } else {
-    // single tap -> normal zoom
+    // jedan klik - normalno video
     player.style.transform = `translate(-50%,-50%) scale(${videoNormalScale})`;
   }
   lastTap = now;
