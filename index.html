@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Circle Player Pop-Out Full</title>
+<title>YouTube Circle Player Pop-Out Button</title>
 <style>
 body {
   margin:0;
@@ -29,8 +29,6 @@ h3 {
   margin-top:40px;
   background:#000;
   box-shadow:0 0 25px rgba(0,0,0,.6);
-  cursor:pointer;
-  transition: all 0.3s ease;
 }
 
 /* video */
@@ -44,6 +42,20 @@ h3 {
   transform:translate(-50%,-50%) scale(1);
   transform-origin:center;
   transition: all 0.3s ease;
+}
+
+/* pop-out dugme */
+.popout-btn {
+  position:absolute;
+  top:10px;
+  right:10px;
+  background:rgba(255,255,255,0.2);
+  color:white;
+  border:none;
+  padding:4px 8px;
+  cursor:pointer;
+  font-size:18px;
+  z-index:10;
 }
 
 /* kontrole */
@@ -88,6 +100,7 @@ h3 {
 
 <div class="circle" id="circle">
   <iframe id="player" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+  <button class="popout-btn" id="popoutBtn">→</button>
 </div>
 
 <div class="controls">
@@ -120,6 +133,7 @@ const videos = [
 const player = document.getElementById("player");
 const slider = document.getElementById("zoomSlider");
 const circle = document.getElementById("circle");
+const popoutBtn = document.getElementById("popoutBtn");
 
 function setZoom(v){
   player.style.transform = "translate(-50%,-50%) scale("+v+")";
@@ -142,24 +156,29 @@ videos.forEach(id=>{
   playlist.appendChild(btn);
 });
 
-// POP-OUT na klik
+// pop-out logika
 let poppedOut = false;
 
-circle.addEventListener("click", ()=>{
+popoutBtn.addEventListener("click", (e)=>{
+  e.stopPropagation(); // ne propagira klik do kruga
   if(!poppedOut){
-    // smesti iframe u "pop-out" režim unutar ekrana
-    player.style.width = "90vw";       // maksimalno da stane u ekran
-    player.style.height = "calc(90vw * 9 / 16)";  // zadrži 16:9 proporciju
-    player.style.transform = "translate(-50%, -50%) scale(1)";
-    circle.style.overflow = "visible"; // da se video vidi izvan kruga
+    player.style.width = "90vw";
+    player.style.height = "calc(90vw * 9 / 16)";
+    circle.style.overflow = "visible";
     poppedOut = true;
-  } else {
-    // vrati u krug
-    player.style.width = "640px";
-    player.style.height = "360px";
-    player.style.transform = "translate(-50%,-50%) scale(1)";
-    circle.style.overflow = "hidden";
-    poppedOut = false;
+  }
+});
+
+// klik van videa vraca u krug
+document.body.addEventListener("click", (e)=>{
+  if(poppedOut){
+    // proveri da li klik nije unutar videa
+    if(!circle.contains(e.target)){
+      player.style.width = "640px";
+      player.style.height = "360px";
+      circle.style.overflow = "hidden";
+      poppedOut = false;
+    }
   }
 });
 </script>
