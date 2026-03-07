@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Circle Player</title>
+<title>YouTube Circle Player with JSON Playlist</title>
 <style>
 body{
   margin:0;
@@ -15,28 +15,33 @@ body{
   align-items:center;
 }
 
-.circle {
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  overflow: hidden;
-  position: relative;
+/* Krug */
+.circle{
+  width:300px;
+  height:300px;
+  border-radius:50%;
+  overflow:hidden;
+  position:relative;
+  margin-top:50px;
   background:#000;
+  box-shadow:0 0 25px rgba(0,0,0,.6);
 }
 
-.circle iframe {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(1);
-  transform-origin: center center;
-  object-fit: contain; /* čuva proporcije i stane u krug */
+/* Video */
+.circle iframe{
+  width:640px;
+  height:360px;
+  border:0;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(1);
+  transform-origin:center;
 }
 
+/* Kontrole */
 .controls{
-  margin-top:20px;
+  margin-top:30px;
   width:90%;
   max-width:400px;
   text-align:center;
@@ -46,8 +51,15 @@ body{
   width:100%;
 }
 
-.buttons{
+.controls input[type="number"]{
+  width:80px;
   margin-top:10px;
+  font-size:16px;
+}
+
+/* Dugmad */
+.buttons{
+  margin-top:15px;
 }
 
 .buttons button{
@@ -59,25 +71,27 @@ body{
   cursor:pointer;
 }
 
+/* Playlist */
 .playlist{
-  margin-top:20px;
+  margin-top:30px;
   width:95%;
   max-width:500px;
-  height:250px;
-  overflow-y:auto;
-  background:#000;
-  border:1px solid #333;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
 }
 
 .video-btn{
-  padding:6px;
-  border-bottom:1px solid #222;
+  padding:8px;
+  background:#222;
+  border:1px solid #444;
   font-size:12px;
+  text-align:center;
   cursor:pointer;
 }
 
-.video-btn:hover{
-  background:#222;
+.video-btn:active{
+  background:#333;
 }
 </style>
 </head>
@@ -91,20 +105,22 @@ body{
 
 <div class="controls">
   <p>Zoom video</p>
-  <input type="range" id="zoomSlider" min="0.5" max="2" step="0.05" value="1">
+  <input type="range" id="zoomSlider" min="0.3" max="1.5" step="0.05" value="1">
+  <br><br>
+  <input type="number" id="zoomInput" step="0.05" value="1">
   <div class="buttons">
-    <button onclick="playRandom()">Play</button>
-    <button onclick="nextRandom()">Next</button>
+    <button onclick="playRandom()">Play Random</button>
+    <button onclick="nextVideo()">Next</button>
   </div>
 </div>
 
 <div class="playlist" id="playlist"></div>
 
+<!-- YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-
-/* UBACI OVDE CEO SVOJ JSON */
+// JSON Playlist
 const playlistData = [
   {
     "key": "Sheena Easton - Sheena Easton-Morning Train",
@@ -990,65 +1006,77 @@ const playlistData = [
   }
 ];
 
-/* IZVUCI URL-OVE */
-const videos = playlistData.map(v=>v.youtubeUrl);
+// Extract YouTube IDs
+const videos = playlistData.map(v => {
+  const url = v.youtubeUrl;
+  return url.includes("v=") ? url.split("v=")[1] : url;
+});
 
-/* YOUTUBE */
+// YouTube Player
 let player;
+let currentIndex = 0;
 
 function getId(url){
-  const params = new URL(url).searchParams;
-  return params.get("v");
+  return url.includes("v=") ? url.split("v=")[1] : url;
 }
 
 function onYouTubeIframeAPIReady(){
   player = new YT.Player('player',{
     height:'360',
     width:'640',
-    videoId:getId(videos[0]),
-    events:{ 'onStateChange':onPlayerStateChange }
+    videoId: videos[currentIndex],
+    events:{ 'onStateChange': onPlayerStateChange }
   });
 }
 
 function onPlayerStateChange(e){
   if(e.data === YT.PlayerState.ENDED){
-    nextRandom();
+    nextVideo();
   }
 }
 
-/* RANDOM */
+// Play Random
 function playRandom(){
-  const i = Math.floor(Math.random()*videos.length);
-  player.loadVideoById(getId(videos[i]));
+  currentIndex = Math.floor(Math.random()*videos.length);
+  player.loadVideoById(videos[currentIndex]);
 }
 
-function nextRandom(){
-  playRandom();
+// Next Video
+function nextVideo(){
+  currentIndex = (currentIndex + 1) % videos.length;
+  player.loadVideoById(videos[currentIndex]);
 }
 
-/* ZOOM */
+// Zoom
 const slider = document.getElementById("zoomSlider");
+const input = document.getElementById("zoomInput");
 
-slider.oninput = () => {
-  if (player && player.getIframe) {
+function setZoom(v){
+  if(player && player.getIframe){
     const iframe = player.getIframe();
-    iframe.style.transform = "translate(-50%, -50%) scale(" + slider.value + ")";
+    iframe.style.transform = "translate(-50%,-50%) scale(" + v + ")";
   }
-};
+  slider.value = v;
+  input.value = v;
+}
 
-/* PLAYLIST UI */
-const playlist = document.getElementById("playlist");
+slider.oninput = ()=> setZoom(slider.value);
+input.oninput = ()=> setZoom(input.value);
 
-playlistData.forEach((v,i)=>{
-  const div=document.createElement("div");
-  div.className="video-btn";
-  div.innerText = v.artist + " - " + v.track;
-  div.onclick=()=>{
-    player.loadVideoById(getId(v.youtubeUrl));
+// Playlist UI
+const playlistEl = document.getElementById("playlist");
+
+playlistData.forEach((item, i)=>{
+  const btn = document.createElement("div");
+  btn.className = "video-btn";
+  btn.innerText = item.artist + " - " + item.track;
+  btn.onclick = ()=>{
+    currentIndex = i;
+    player.loadVideoById(videos[i]);
   };
-  playlist.appendChild(div);
+  playlistEl.appendChild(btn);
 });
-
 </script>
+
 </body>
 </html>
