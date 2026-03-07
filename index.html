@@ -17,7 +17,7 @@ body{
 
 /* Krug */
  .circle{
-  width:auto;
+  width:300px;
   height:300px;
   border-radius:50%;
   overflow:hidden;
@@ -1042,8 +1042,10 @@ function getId(url){
 
 function onYouTubeIframeAPIReady(){
   player = new YT.Player('player',{
-    height:'360',
-    width:'640',
+   /* height:'360',
+    width:'640',*/
+    height: '640',
+    width: '360',
     videoId: videos[currentIndex],
     events:{ 'onStateChange': onPlayerStateChange }
   });
