@@ -104,7 +104,7 @@ body{
 <div class="circle" id="circle">
   <iframe
     id="player"
-    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+    src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
     allowfullscreen>
   </iframe>
 </div>
@@ -159,10 +159,12 @@ const circle = document.getElementById("circle");
 
 let skipPos = { x: 150, y: 150 }; // Default position for skip button
 let videoNormalScale = 1;
+let zoomed = false;
 
 // Video Zoom function
 function setZoom(v){
-  player.style.transform = "translate(-50%,-50%) scale("+v+")";
+  videoNormalScale = parseFloat(v);
+  player.style.transform = "translate(-50%,-50%) scale("+videoNormalScale+")";
   slider.value = v;
   input.value = v;
 }
@@ -170,7 +172,7 @@ function setZoom(v){
 slider.oninput = () => { setZoom(slider.value); }
 input.oninput = () => { setZoom(input.value); }
 
-// Set the skip position manually
+// Set the skip position manually (pomoću X i Y koordinata)
 skipX.oninput = () => {
   skipPos.x = parseInt(skipX.value, 10);
   updateSkipPosition();
@@ -181,8 +183,9 @@ skipY.oninput = () => {
   updateSkipPosition();
 }
 
+// Ažuriranje pozicije videa unutar kruga
 function updateSkipPosition() {
-  circle.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
+  player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
 }
 
 // Playlist
@@ -198,18 +201,19 @@ videos.forEach(id => {
   playlist.appendChild(btn);
 });
 
-// Double Tap - Switch between zoom mode and skip button position mode
+// Dupli klik - Prebacuje između moda za zumiranje i moda za poziciju skip dugmeta
 let lastTap = 0;
 circle.addEventListener("click", (e) => {
   const now = Date.now();
   if (now - lastTap < 300) {
-    // Double Tap detected, switch modes
-    if (circle.style.transform.includes("translate")) {
-      // If it's in skip button mode, switch to zoom mode
-      circle.style.transform = `translate(-50%, -50%)`;
+    // Dupli klik prebacuje između moda
+    if (zoomed) {
+      setZoom(videoNormalScale); // Vraća zoom na početnu poziciju
+      zoomed = false;
     } else {
-      // Switch to skip button position mode
-      circle.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
+      // Prebacuje u skip button poziciju
+      player.style.transform = `translate(-50%, -50%) translate(${skipPos.x}px, ${skipPos.y}px)`;
+      zoomed = true;
     }
   }
   lastTap = now;
