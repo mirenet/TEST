@@ -37,11 +37,8 @@ border:0;
 position:absolute;
 top:50%;
 left:50%;
-transform:translate(-50%,-50%) scale(1);
 transform-origin:center;
 }
-
-/* overlay koji hvata klikove */
 
 .overlay{
 position:absolute;
@@ -64,8 +61,7 @@ text-align:center;
 width:100%;
 }
 
-.controls input[type="number"]{
-width:80px;
+.controls input{
 margin-top:10px;
 font-size:16px;
 }
@@ -119,17 +115,27 @@ allowfullscreen>
 type="range"
 id="zoomSlider"
 min="0.3"
-max="1.5"
+max="2"
 step="0.05"
 value="1">
 
-<br><br>
+<br>
 
 <input
 type="number"
 id="zoomInput"
 step="0.05"
 value="1">
+
+<br><br>
+
+<p>Skip button position</p>
+
+X:
+<input type="number" id="skipX" value="150">
+
+Y:
+<input type="number" id="skipY" value="150">
 
 </div>
 
@@ -138,28 +144,38 @@ value="1">
 <script>
 
 const player=document.getElementById("player")
-const slider=document.getElementById("zoomSlider")
-const input=document.getElementById("zoomInput")
 const overlay=document.getElementById("overlay")
 
+const slider=document.getElementById("zoomSlider")
+const input=document.getElementById("zoomInput")
+
+const skipX=document.getElementById("skipX")
+const skipY=document.getElementById("skipY")
+
 let zoom=1
+let posX=0
+let posY=0
+
 let tapTime=0
+let tapCount=0
 
+function updateTransform(){
 
+player.style.transform=
+`translate(-50%,-50%) translate(${posX}px,${posY}px) scale(${zoom})`
+
+}
 
 function setZoom(v){
 
 zoom=parseFloat(v)
 
-player.style.transform=
-"translate(-50%,-50%) scale("+zoom+")"
-
 slider.value=zoom
 input.value=zoom
 
+updateTransform()
+
 }
-
-
 
 slider.oninput=()=>setZoom(slider.value)
 input.oninput=()=>setZoom(input.value)
@@ -170,25 +186,60 @@ overlay.addEventListener("click",()=>{
 
 const now=Date.now()
 
-// double click
 if(now-tapTime<300){
 
-zoom=zoom===1?1.8:1
+tapCount++
 
-setZoom(zoom)
+}else{
+
+tapCount=1
 
 }
 
 tapTime=now
 
+
+
+if(tapCount===2){
+
+// double tap -> zoom skip dugme
+
+posX=parseInt(skipX.value)||0
+posY=parseInt(skipY.value)||0
+
+zoom=2
+
+updateTransform()
+
+}
+
+
+
+if(tapCount===3){
+
+// triple tap -> reset
+
+posX=0
+posY=0
+zoom=1
+
+updateTransform()
+
+tapCount=0
+
+}
+
+
+
 // pusti klik videu
+
 overlay.style.pointerEvents="none"
 
 setTimeout(()=>{
 
 overlay.style.pointerEvents="auto"
 
-},400)
+},350)
 
 })
 
@@ -230,6 +281,8 @@ player.src="https://www.youtube.com/embed/"+id
 playlist.appendChild(btn)
 
 })
+
+updateTransform()
 
 </script>
 
