@@ -1,309 +1,195 @@
-<!doctype html>
-<html lang="sr">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>YouTube circle — drag, mark, jump</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>YouTube Circle Zoom Test</title>
+
 <style>
-  :root{--bg:#111;--panel:#222;--muted:#999;}
-  body{margin:0;background:var(--bg);color:#fff;font-family:Inter,Arial,Helvetica,sans-serif;display:flex;flex-direction:column;align-items:center;padding:18px;}
-  h2{margin:6px 0 12px;font-weight:600;}
-  .wrap{width:100%;max-width:720px;}
-  .circle{width:300px;height:300px;border-radius:50%;overflow:hidden;position:relative;margin:10px auto;background:#000;box-shadow:0 10px 30px rgba(0,0,0,.6);}
-  iframe#player{width:640px;height:360px;border:0;position:absolute;top:50%;left:50%;transform-origin:center;will-change:transform;transition:transform 260ms cubic-bezier(.2,.9,.2,1);}
-  /* overlay which captures drag/clicks */
-  .overlay{position:absolute;inset:0;cursor:grab;background:transparent;touch-action:none;-webkit-user-select:none;-ms-user-select:none;user-select:none;}
-  .overlay.dragging{cursor:grabbing;}
-  /* marker for saved point */
-  .marker{position:absolute;width:14px;height:14px;border-radius:50%;background:rgba(255,80,80,0.95);transform:translate(-50%,-50%);pointer-events:none;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.6);display:none;}
-  /* controls */
-  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:14px;}
-  .controls label{font-size:13px;color:var(--muted);}
-  .controls input[type=range]{width:200px;vertical-align:middle;}
-  .controls .btn{background:var(--panel);border:1px solid #333;color:#fff;padding:7px 10px;border-radius:8px;cursor:pointer;}
-  .status{margin-top:10px;color:var(--muted);font-size:13px;text-align:center;}
-  .debug{margin-top:8px;color:#aaa;font-size:12px;text-align:center;}
+
+body{
+margin:0;
+background:#111;
+color:white;
+font-family:Arial;
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+/* krug */
+
+.circle{
+width:300px;
+height:300px;
+border-radius:50%;
+overflow:hidden;
+position:relative;
+margin-top:50px;
+background:#000;
+box-shadow:0 0 25px rgba(0,0,0,.6);
+}
+
+/* video */
+
+.circle iframe{
+width:640px;
+height:360px;
+border:0;
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%) scale(1);
+transform-origin:center;
+}
+
+/* kontrole */
+
+.controls{
+margin-top:30px;
+width:90%;
+max-width:400px;
+text-align:center;
+}
+
+.controls input[type="range"]{
+width:100%;
+}
+
+.controls input[type="number"]{
+width:80px;
+margin-top:10px;
+font-size:16px;
+}
+
+/* playlist */
+
+.playlist{
+margin-top:30px;
+width:95%;
+max-width:500px;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px;
+}
+
+.video-btn{
+padding:8px;
+background:#222;
+border:1px solid #444;
+font-size:12px;
+text-align:center;
+cursor:pointer;
+}
+
+.video-btn:active{
+background:#333;
+}
+
 </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <h2>YouTube circle — drag, mark, jump</h2>
 
-    <div class="circle" id="circle">
-      <!-- YouTube embed (enablejsapi not required for this behavior) -->
-      <iframe id="player" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+<h3>YouTube Circle Zoom Test</h3>
 
-      <!-- overlay captures pointer events (drag/click) -->
-      <div id="overlay" class="overlay" aria-hidden="true"></div>
+<div class="circle">
+<iframe
+id="player"
+src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+allowfullscreen>
+</iframe>
+</div>
 
-      <!-- marker for saved skip location -->
-      <div id="marker" class="marker" title="Saved point"></div>
-    </div>
+<div class="controls">
 
-    <div class="controls">
-      <label>Default zoom (single-click resets here):</label>
-      <input id="defaultZoomRange" type="range" min="0.5" max="2.4" step="0.01" value="1.15">
-      <span id="defaultZoomVal" style="min-width:42px;text-align:center;display:inline-block">1.15x</span>
+<p>Zoom video</p>
 
-      <button id="clearBtn" class="btn">Clear saved</button>
-      <button id="jumpBtn" class="btn">Jump to saved</button>
-    </div>
+<input
+type="range"
+id="zoomSlider"
+min="0.3"
+max="1.5"
+step="0.05"
+value="1">
 
-    <div class="status" id="status">Drag video to search · Click once to save point · Double-click to jump to saved · Single-click (after saved) → reset to default zoom</div>
-    <div class="debug" id="debug"></div>
-  </div>
+<br><br>
+
+<input
+type="number"
+id="zoomInput"
+step="0.05"
+value="1">
+
+</div>
+
+<div class="playlist" id="playlist"></div>
 
 <script>
-/*
-Behavior implemented:
-- video initially fitted to circle (fitZoom), but defaultResetZoom is the slider value (e.g., 1.15)
-- pointer drag moves the video (posX,posY)
-- click (no drag) when there is no saved -> saves point (pre-scale coords)
-- double-click -> jump (zoom to jumpZoom and center saved point)
-- single-click when saved exists -> reset to defaultResetZoom and center (posX=0,posY=0)
-*/
 
-const circle = document.getElementById('circle');
-const iframe = document.getElementById('player');
-const overlay = document.getElementById('overlay');
-const marker = document.getElementById('marker');
+// lista 15 muzičkih videa
+const videos = [
+"dQw4w9WgXcQ",
+"9bZkp7q19f0",
+"3JZ_D3ELwOQ",
+"kJQP7kiw5Fk",
+"RgKAFK5djSk",
+"OPf0YbXqDm0",
+"JGwWNGJdvx8",
+"60ItHLz5WEA",
+"CevxZvSJLk8",
+"fRh_vgS2dFE",
+"lp-EO5I60KA",
+"KQ6zr6kCPj8",
+"pRpeEdMmmQ0",
+"hT_nvWreIhg",
+"YQHsXMglC9A"
+];
 
-const defaultZoomRange = document.getElementById('defaultZoomRange');
-const defaultZoomVal = document.getElementById('defaultZoomVal');
-const clearBtn = document.getElementById('clearBtn');
-const jumpBtn = document.getElementById('jumpBtn');
-const status = document.getElementById('status');
-const debug = document.getElementById('debug');
+const player = document.getElementById("player");
+const slider = document.getElementById("zoomSlider");
+const input = document.getElementById("zoomInput");
 
-// state
-let fitZoom = 1;                // zoom that fits whole video into circle
-let zoom = 1;                   // current zoom (applied)
-let defaultZoom = parseFloat(defaultZoomRange.value); // reset target
-let jumpZoom = 2.0;             // how much to zoom on jump (can be tuned)
-let posX = 0, posY = 0;         // current translate in pixels (applied after centering)
-let saved = null;               // {px,py} pre-scale coords relative to iframe center (in CSS px)
-let lastTapTimer = null;
-let lastPointer = null;
-let dragging = false;
-let pointerStart = null;
-let posStart = null;
-const CLICK_MOVE_THRESHOLD = 6; // px
+function setZoom(v){
 
-// helper to get real sizes
-function getRects(){
-  return {
-    circleRect: circle.getBoundingClientRect(),
-    iframeRect: iframe.getBoundingClientRect()
-  };
+player.style.transform =
+"translate(-50%,-50%) scale("+v+")";
+
+slider.value=v;
+input.value=v;
+
 }
 
-// compute fit zoom so whole iframe fits inside circle (no cropping)
-function computeFitZoom(){
-  const { circleRect, iframeRect } = getRects();
-  // note: iframe has intrinsic size (CSS) that we set; use iframeRect
-  const sx = circleRect.width / iframeRect.width;
-  const sy = circleRect.height / iframeRect.height;
-  return Math.min(sx, sy);
+slider.oninput=()=>{
+setZoom(slider.value);
 }
 
-// apply CSS transform to iframe and update marker position
-function applyTransform(){
-  iframe.style.transform = `translate(-50%,-50%) translate(${posX}px,${posY}px) scale(${zoom})`;
-  updateMarkerVisual();
+input.oninput=()=>{
+setZoom(input.value);
 }
 
-// update marker position to reflect saved point after current transform
-function updateMarkerVisual(){
-  if(!saved){
-    marker.style.display = 'none';
-    return;
-  }
-  // The displayed screen offset of the saved pre-scale point = saved.px*zoom + posX
-  const { circleRect } = getRects();
-  const cx = circleRect.left + circleRect.width/2;
-  const cy = circleRect.top  + circleRect.height/2;
-  const screenX = cx + (saved.px * zoom + posX);
-  const screenY = cy + (saved.py * zoom + posY);
-  marker.style.left = (screenX - circleRect.left) + 'px';
-  marker.style.top  = (screenY - circleRect.top)  + 'px';
-  marker.style.display = 'block';
-}
+// playlist
 
-// set initial layout
-function init(){
-  // compute fitZoom so whole video initially visible
-  fitZoom = computeFitZoom();
-  // start showing entire video fit
-  zoom = fitZoom;
-  // defaultZoom remains from slider; update UI
-  defaultZoom = parseFloat(defaultZoomRange.value);
-  defaultZoomVal.innerText = defaultZoom.toFixed(2) + 'x';
-  posX = 0; posY = 0;
-  applyTransform();
-  debug.innerText = `fitZoom=${fitZoom.toFixed(3)} currentZoom=${zoom.toFixed(3)}`;
-}
-window.addEventListener('load', init);
-window.addEventListener('resize', () => {
-  // recompute fitZoom but don't override user's current zoom unless we are still at fitZoom
-  const oldFit = fitZoom;
-  fitZoom = computeFitZoom();
-  // if currently equal to old fit, update to new fit
-  if(Math.abs(zoom - oldFit) < 0.001){
-    zoom = fitZoom;
-    applyTransform();
-  }
-  updateMarkerVisual();
-});
+const playlist=document.getElementById("playlist");
 
-// slider changes defaultZoom (target for reset)
-defaultZoomRange.addEventListener('input', (e)=>{
-  defaultZoom = parseFloat(e.target.value);
-  defaultZoomVal.innerText = defaultZoom.toFixed(2) + 'x';
-});
+videos.forEach(id=>{
 
-// clear saved
-clearBtn.addEventListener('click', ()=>{
-  saved = null; marker.style.display = 'none';
-  status.innerText = 'Saved cleared';
-  setTimeout(()=> status.innerText = 'Drag video to search · Click once to save point · Double-click to jump to saved',1400);
-});
+const btn=document.createElement("div");
 
-// jump button for manual test
-jumpBtn.addEventListener('click', ()=>{
-  if(!saved){
-    alert('No saved point. Click once on video to save point first.');
-    return;
-  }
-  doJump();
-});
+btn.className="video-btn";
+btn.innerText=id;
 
-// do jump to saved: center saved point and zoom to jumpZoom
-function doJump(){
-  if(!saved) return;
-  // posX such that saved.px*jumpZoom + posX == 0
-  posX = -saved.px * jumpZoom;
-  posY = -saved.py * jumpZoom;
-  zoom = jumpZoom;
-  applyTransform();
-  status.innerText = 'Jumped to saved (double-click / Jump button)';
-  setTimeout(()=> status.innerText = 'Drag video to search · Click once to save point · Double-click to jump to saved', 1400);
-}
+btn.onclick=()=>{
+player.src="https://www.youtube.com/embed/"+id;
+};
 
-// reset to default zoom and center
-function resetToDefault(){
-  zoom = defaultZoom;
-  posX = 0; posY = 0;
-  applyTransform();
-  status.innerText = 'Reset to default zoom';
-  setTimeout(()=> status.innerText = 'Drag video to search · Click once to save point · Double-click to jump to saved', 1200);
-}
+playlist.appendChild(btn);
 
-// pointer handling (works for mouse & touch)
-// We'll use pointerdown/pointermove/pointerup on overlay and pointer capture
-overlay.addEventListener('pointerdown', (ev) => {
-  overlay.setPointerCapture(ev.pointerId);
-  lastPointer = ev.pointerId;
-  dragging = false;
-  overlay.classList.add('dragging');
-  pointerStart = {x: ev.clientX, y: ev.clientY};
-  posStart = {x: posX, y: posY};
-});
-
-overlay.addEventListener('pointermove', (ev) => {
-  if(lastPointer !== ev.pointerId) return;
-  if(!pointerStart) return;
-  const dx = ev.clientX - pointerStart.x;
-  const dy = ev.clientY - pointerStart.y;
-  // if movement exceeds threshold mark as dragging
-  if(!dragging && (Math.hypot(dx,dy) > CLICK_MOVE_THRESHOLD)) dragging = true;
-  if(dragging){
-    posX = posStart.x + dx;
-    posY = posStart.y + dy;
-    applyTransform();
-  }
-});
-
-overlay.addEventListener('pointerup', (ev) => {
-  if(lastPointer !== ev.pointerId) { try{ overlay.releasePointerCapture(ev.pointerId); }catch(e){} return; }
-  overlay.releasePointerCapture(ev.pointerId);
-  overlay.classList.remove('dragging');
-
-  const dx = ev.clientX - pointerStart.x;
-  const dy = ev.clientY - pointerStart.y;
-  const moved = Math.hypot(dx,dy) > CLICK_MOVE_THRESHOLD;
-
-  // If dragging happened (move), treat as end of drag only (no click)
-  if(moved){
-    // simply end drag
-    pointerStart = null;
-    posStart = null;
-    lastPointer = null;
-    dragging = false;
-    updateMarkerVisual();
-    return;
-  }
-
-  // It's a click (no drag). Use timer to detect single vs double click.
-  if(lastTapTimer){
-    // double click detected: clear timer and handle double
-    clearTimeout(lastTapTimer);
-    lastTapTimer = null;
-    // DOUBLE click:
-    if(saved){
-      doJump();
-    } else {
-      status.innerText = 'No saved point yet — click once to save a point first';
-      setTimeout(()=> status.innerText = 'Drag video to search · Click once to save point · Double-click to jump to saved', 1400);
-    }
-  } else {
-    // schedule single click handler after small delay
-    const thisEvent = ev; // capture event
-    lastTapTimer = setTimeout(() => {
-      lastTapTimer = null;
-      // SINGLE click behavior:
-      if(!saved){
-        // save point: compute saved.px, saved.py in pre-scale coords relative to iframe center
-        const { circleRect, iframeRect } = getRects();
-        const cx = circleRect.left + circleRect.width/2;
-        const cy = circleRect.top  + circleRect.height/2;
-        // offset from center in screen coordinates
-        const offsetX = thisEvent.clientX - cx;
-        const offsetY = thisEvent.clientY - cy;
-        // compute pre-scale coordinates: offset_screen = saved.px*zoom + posX
-        const px = (offsetX - posX) / zoom;
-        const py = (offsetY - posY) / zoom;
-        saved = { px: Math.round(px), py: Math.round(py) };
-        updateMarkerVisual();
-        status.innerText = 'Saved point (marker shown). Double-click to jump.';
-        // debug info
-        debug.innerText = `saved.px=${saved.px}, saved.py=${saved.py}`;
-        setTimeout(()=> status.innerText = 'Drag video to search · Click once to save point · Double-click to jump to saved', 1400);
-      } else {
-        // saved exists -> single click resets to default
-        resetToDefault();
-      }
-    }, 260);
-  }
-
-  // reset click tracking vars
-  pointerStart = null;
-  posStart = null;
-  lastPointer = null;
-  dragging = false;
-});
-
-// On scroll/resize update marker visual
-window.addEventListener('resize', updateMarkerVisual);
-window.addEventListener('scroll', updateMarkerVisual);
-
-// initial call on load (ensure sizes measured)
-window.addEventListener('load', () => {
-  // small delay to ensure layout computed
-  setTimeout(()=>{
-    init();
-  }, 10);
 });
 
 </script>
+
 </body>
 </html>
