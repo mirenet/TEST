@@ -186,7 +186,7 @@ videos.forEach(id=>{
   btn.innerText = id;
   btn.onclick = () => {
     const wasFloating = isFloating;
-    player.src = "https://www.youtube.com/embed/" + id;
+    player.src = "https://www.youtube.com/embed/" + id + "?modestbranding=1&enablejsapi=1&widgetid=3&iv_load_policy=3&fs=0";
     // ako je floating, zadržimo floating klasu
     if(wasFloating){
       // mala odgoda da se primeni dimenzija
