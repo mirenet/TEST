@@ -130,7 +130,7 @@
 
 <div class="circle" id="circle">
   <iframe id="player"
-          src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+          src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&showinfo=0&modestbranding=1&enablejsapi=1&widgetid=3&iv_load_policy=3&fs=0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowfullscreen>
   </iframe>
@@ -186,7 +186,7 @@ videos.forEach(id=>{
   btn.innerText = id;
   btn.onclick = () => {
     const wasFloating = isFloating;
-    player.src = "https://youtube-nocookie.com/embed/" + id + "?autoplay=1&showinfo=0&modestbranding=1&enablejsapi=1&widgetid=3&iv_load_policy=3&fs=0";
+    player.src = "https://www.youtube-nocookie.com/embed/" + id + "?autoplay=1&showinfo=0&modestbranding=1&enablejsapi=1&widgetid=3&iv_load_policy=3&fs=0";
     // ako je floating, zadržimo floating klasu
     if(wasFloating){
       // mala odgoda da se primeni dimenzija
