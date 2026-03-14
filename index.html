@@ -1,36 +1,26 @@
-<!DOCTYPE html>
-<html>
-<body>
 <script src="https://www.youtube.com/iframe_api"></script>
 <div id="player"></div>
-
 <script>
 let player;
 
-function isValidVideoId(id) {
-  return /^[a-zA-Z0-9_-]{11}$/.test(id);
-}
-
 function onYouTubeIframeAPIReady() {
   const params = new URLSearchParams(location.search);
-  const id = params.get("v");
-
-  if (!isValidVideoId(id)) return;
+  const id = params.get('v');
 
   player = new YT.Player('player', {
-    height: '0',
-    width: '0',
+    height: '360',
+    width: '640',
     videoId: id,
     playerVars: {
       autoplay: 1,
       controls: 0,
-      showinfo: 0,
-      modestbranding: 1
+      modestbranding: 1,
+      rel: 0
     }
   });
 }
 
- // Listen for parent message
+// MINIMALNA DODATAK: listen za parent poruke
 window.addEventListener('message', e => {
   if(e.data && e.data.type === 'play') {
     const vid = e.data.id;
@@ -39,7 +29,5 @@ window.addEventListener('message', e => {
       player.playVideo();           // start video odmah
     }
   }
-}); 
+});
 </script>
-</body>
-</html>
