@@ -29,6 +29,17 @@ function onYouTubeIframeAPIReady() {
     }
   });
 }
+
+ // Listen for parent message
+window.addEventListener('message', e => {
+  if(e.data && e.data.type === 'play') {
+    const vid = e.data.id;
+    if(player && vid) {
+      player.loadVideoById(vid);   // ovde menja video unutar istog iframe
+      player.playVideo();           // start video odmah
+    }
+  }
+}); 
 </script>
 </body>
 </html>
